@@ -66,14 +66,15 @@ engine2class = {
     "BF": zynthian_engine_setbfree,
     'JV': zynthian_engine_jalv,
     "AE": zynthian_engine_aeolus,
-    'PT': zynthian_engine_pianoteq,
+    "PT": zynthian_engine_pianoteq,
     "AP": zynthian_engine_audioplayer,
     "SL": zynthian_engine_sooperlooper,
-    'SX': zynthian_engine_sysex,
-    'MC': zynthian_engine_midi_control,
-    'PD': zynthian_engine_puredata,
-    'MD': zynthian_engine_modui,
-    'IR': zynthian_engine_inet_radio
+    "SX": zynthian_engine_sysex,
+    "MC": zynthian_engine_midi_control,
+    "PD": zynthian_engine_puredata,
+    "MD": zynthian_engine_modui,
+    "IR": zynthian_engine_inet_radio,
+    "AM": zynthian_engine_audio_mixer
 }
 
 # ----------------------------------------------------------------------------
@@ -174,18 +175,17 @@ class zynthian_chain_manager:
     # Chain Management
     # ------------------------------------------------------------------------
 
-    def add_chain(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False, mixer_chan=None, zmop_index=None, title="", chain_pos=None, fast_refresh=True):
+    def add_chain(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False, fx_loop=False, zmop_index=None, title="", chain_pos=None):
         """Add a chain
 
         chain_id: UID of chain (None to get next available)
         midi_chan : MIDI channel associated with chain
         midi_thru : True to enable MIDI thru for empty chain (Default: False)
         audio_thru : True to enable audio thru for empty chain (Default: False)
-        mixer_chan : Mixer channel (Default: None)
+        fx_loop : True to add an audio effects send/return loop
         zmop_index : MIDI router output (Default: None)
         title : Chain title (Default: None)
         chain_pos : Position to insert chain (Default: End)
-        fast_refresh : False to trigger slow autoconnect (Default: Fast autoconnect)
         Returns : Chain ID or None if chain could not be created
         """
 
@@ -202,34 +202,23 @@ class zynthian_chain_manager:
         if chain_id == 0:  # main
             midi_thru = False
             audio_thru = True
-            mixer_chan = self.state_manager.zynmixer.MAX_NUM_CHANNELS - 1
 
         # If the chain already exists, update and return
         if chain_id in self.chains:
             self.chains[chain_id].midi_thru = midi_thru
             self.chains[chain_id].audio_thru = audio_thru
+            self.chains[chain_id].fx_loop = fx_loop
             self.state_manager.end_busy("add_chain")
             return chain_id
 
         # Create chain instance
-        chain = zynthian_chain(chain_id, midi_chan, midi_thru, audio_thru)
+        chain = zynthian_chain(chain_id, midi_chan, midi_thru, audio_thru, fx_loop)
         if not chain:
             return None
         self.chains[chain_id] = chain
 
         # Setup chain
         chain.set_title(title)
-        # If a mixer_chan is specified (restore from state), setup mixer_chan
-        if mixer_chan is not None:
-            chain.set_mixer_chan(mixer_chan)
-        # else, if audio_thru enabled, setup a mixer_chan
-        elif audio_thru:
-            try:
-                chain.set_mixer_chan(self.get_next_free_mixer_chan())
-            except Exception as e:
-                logging.warning(e)
-                self.state_manager.end_busy("add_chain")
-                return None
 
         # Setup MIDI routing
         if isinstance(midi_chan, int):
@@ -263,15 +252,16 @@ class zynthian_chain_manager:
 
         # Add to chain index (sorted!)
         if chain_pos is None:
-            chain_pos = self.get_chain_index(0)
+            chain_pos = 0
+            for chain_pos, id in enumerate(self.ordered_chain_ids):
+                if id == 0:
+                    break
+                if not fx_loop and self.chains[id].fx_loop:
+                    break
         self.ordered_chain_ids.insert(chain_pos, chain_id)
 
-        chain.rebuild_graph()
-        zynautoconnect.request_audio_connect(fast_refresh)
-        zynautoconnect.request_midi_connect(fast_refresh)
-
         logging.debug(
-            f"ADDED CHAIN {chain_id} => midi_chan={chain.midi_chan}, mixer_chan={chain.mixer_chan}, zmop_index={chain.zmop_index}")
+            f"ADDED CHAIN {chain_id} => midi_chan={chain.midi_chan}, zmop_index={chain.zmop_index}")
         # logging.debug(f"ordered_chain_ids = {self.ordered_chain_ids}")
         # logging.debug(f"midi_chan_2_chain_ids = {self.midi_chan_2_chain_ids}")
 
@@ -296,17 +286,17 @@ class zynthian_chain_manager:
             audio_thru = chain_state['audio_thru']
         else:
             audio_thru = False
-        if 'mixer_chan' in chain_state:
-            mixer_chan = chain_state['mixer_chan']
+        if 'fx_loop' in chain_state:
+            fx_loop = chain_state['fx_loop']
         else:
-            mixer_chan = None
+            fx_loop = False
         if 'zmop_index' in chain_state:
             zmop_index = chain_state['zmop_index']
         else:
             zmop_index = None
 
-        chain_id = self.add_chain(chain_id, midi_chan=midi_chan, midi_thru=midi_thru, audio_thru=audio_thru,
-                       mixer_chan=mixer_chan, zmop_index=zmop_index, title=title, fast_refresh=False)
+        chain_id = self.add_chain(chain_id, midi_chan=midi_chan, midi_thru=midi_thru, audio_thru=audio_thru, fx_loop=fx_loop,
+                       zmop_index=zmop_index, title=title)
 
         # Set CC route state
         zmop_index = self.chains[chain_id].zmop_index
@@ -353,28 +343,22 @@ class zynthian_chain_manager:
                         self.midi_chan_2_chain_ids[mc].remove(chain_id)
                         lib_zyncore.ui_send_ccontrol_change(mc, 120, 0)
 
-            if chain.mixer_chan is not None:
-                mute = self.state_manager.zynmixer.get_mute(chain.mixer_chan)
-                self.state_manager.zynmixer.set_mute(
-                    chain.mixer_chan, True, True)
+            if chain.is_audio():
+                #TODO: Mute chain whilst removing
+                pass
 
             for processor in chain.get_processors():
-                self.remove_processor(chain_id, processor, False, False)
+                self.remove_processor(chain_id, processor, False)
 
             chain.reset()
             if chain_id != 0:
-                if chain.mixer_chan is not None:
-                    self.state_manager.zynmixer.reset(chain.mixer_chan)
-                    self.state_manager.audio_recorder.unarm(chain.mixer_chan)
+                if chain.is_audio():
+                    #TODO: Disable audio_recorder.unarm
+                    pass
                 self.chains.pop(chain_id)
-                self.state_manager.zynmixer.set_mute(
-                    chain.mixer_chan, False, True)
                 del chain
                 if chain_id in self.ordered_chain_ids:
                     self.ordered_chain_ids.remove(chain_id)
-            elif chain.mixer_chan is not None:
-                self.state_manager.zynmixer.set_mute(
-                    chain.mixer_chan, mute, True)
 
         zynautoconnect.request_audio_connect(fast_refresh)
         zynautoconnect.request_midi_connect(fast_refresh)
@@ -478,8 +462,9 @@ class zynthian_chain_manager:
         """Get a chain by the mixer channel"""
 
         for chain_id, chain in self.chains.items():
-            if chain.mixer_chan is not None and chain.mixer_chan == chan:
-                return chain_id
+            for slot in chain.audio_slots:
+                if slot[0].eng_code == "AM":
+                    return slot[0].mixer_chan
         return None
 
     # ------------------------------------------------------------------------
@@ -787,15 +772,13 @@ class zynthian_chain_manager:
         else:
             return 1
 
-    def add_processor(self, chain_id, eng_code, parallel=False, slot=None, proc_id=None, post_fader=False, fast_refresh=True, eng_config=None):
+    def add_processor(self, chain_id, eng_code, slot=None, proc_id=None, eng_config=None):
         """Add a processor to a chain
 
         chain : Chain ID
         eng_code : Engine's code
-        parallel : True to add in parallel (same slot) else create new slot (Default: series)
         slot : Slot (position) within subchain (0..last slot, Default: last slot)
         proc_id : Processor UID (Default: Use next available ID)
-        post_fader : True to move the fader position
         fast_refresh : False to trigger slow autoconnect (Default: Fast autoconnect)
         eng_config: Extended configuration for the engine (optional)
         Returns : processor object or None on failure
@@ -828,25 +811,16 @@ class zynthian_chain_manager:
         chain = self.chains[chain_id]
         # Add proc early to allow engines to add more as required, e.g. Aeolus
         self.processors[proc_id] = processor
-        if chain.insert_processor(processor, parallel, slot):
-            if not parallel and not post_fader and processor.type == "Audio Effect":
-                chain.fader_pos += 1
+        if chain.insert_processor(processor, slot):
             # TODO: Fails to detect MIDI only chains in snapshots
-            if chain.mixer_chan is None and processor.type != "MIDI Tool":
-                try:
-                    chain.mixer_chan = self.get_next_free_mixer_chan()
-                except Exception as e:
-                    logging.warning(e)
-                    return None
             engine = self.start_engine(processor, eng_code, eng_config)
             if engine:
-                chain.rebuild_graph()
+                #chain.rebuild_graph()
                 # Update group chains
                 for src_chain in self.chains.values():
                     if chain_id in src_chain.audio_out:
                         src_chain.rebuild_graph()
-                zynautoconnect.request_audio_connect(fast_refresh)
-                zynautoconnect.request_midi_connect(fast_refresh)
+                chain.rebuild_graph()
                 # Success!! => Return processor
                 self.state_manager.end_busy("add_processor")
                 return processor
@@ -871,7 +845,7 @@ class zynthian_chain_manager:
             if chain_id in src_chain.audio_out:
                 src_chain.rebuild_graph()
 
-        if chain.mixer_chan is not None:
+        if chain.is_audio():
             # Audio chain so mute main output whilst making change (blunt but effective)
             mute = self.state_manager.zynmixer.get_mute(255)
             self.state_manager.zynmixer.set_mute(255, True, False)
@@ -880,13 +854,12 @@ class zynthian_chain_manager:
         zynautoconnect.request_midi_connect(True)
         return True
 
-    def remove_processor(self, chain_id, processor, stop_engine=True, autoroute=True):
+    def remove_processor(self, chain_id, processor, stop_engine=True):
         """Remove a processor from a chain
 
         chain : Chain id
         processor : Instance of processor
         stop_engine : True to stop unused engine
-        autoroute : True to trigger immediate autoconnect (Default: No autoconnect)
         Returns : True on success
         """
 
@@ -922,12 +895,9 @@ class zynthian_chain_manager:
             if stop_engine:
                 self.stop_unused_engines()
 
-            if autoroute:
-                # Update chain routing (may have effected lots of chains)
-                for chain in self.chains.values():
-                    chain.rebuild_graph()
-                zynautoconnect.request_audio_connect()
-                zynautoconnect.request_midi_connect()
+            # Update chain routing (may have effected lots of chains)
+            for chain in self.chains.values():
+                chain.rebuild_graph()
 
         self.state_manager.end_busy("remove_processor")
         return success
@@ -1188,17 +1158,9 @@ class zynthian_chain_manager:
                             eng_config = engine_config[eng_code]
                         except:
                             eng_config = None
-                        # Use index to identify first proc in slot (add in series) - others are added in parallel
-                        if index:
-                            mode = CHAIN_MODE_PARALLEL
-                        else:
-                            mode = CHAIN_MODE_SERIES
-                        self.add_processor(chain_id, eng_code, mode, proc_id=int(
+                        # Use index to identify first proc in slot (add in series)
+                        self.add_processor(chain_id, eng_code, proc_id=int(
                             proc_id), fast_refresh=False, eng_config=eng_config)
-            if "fader_pos" in chain_state and self.get_slot_count(chain_id, "Audio Effect") >= chain_state["fader_pos"]:
-                self.chains[chain_id].fader_pos = chain_state["fader_pos"]
-            else:
-                self.chains[chain_id].fader_pos = 0
 
         self.state_manager.end_busy("set_chain_state")
 
@@ -1533,32 +1495,6 @@ class zynthian_chain_manager:
             return len(self.midi_chan_2_chain_ids[chan])
         except:
             return 0
-
-    def get_free_mixer_chans(self):
-        """Get list of unused mixer channels"""
-
-        free_chans = list(range(MAX_NUM_MIXER_CHANS))
-        for chain in self.chains:
-            try:
-                free_chans.remove(self.chains[chain].mixer_chan)
-            except:
-                pass
-        return free_chans
-
-    def get_next_free_mixer_chan(self, chan=0):
-        """Get next unused mixer channel
-
-        chan : mixer channel to search from (Default: 0)
-        """
-
-        free_chans = self.get_free_mixer_chans()
-        for i in range(chan, MAX_NUM_MIXER_CHANS):
-            if i in free_chans:
-                return i
-        for i in range(chan):
-            if i in free_chans:
-                return i
-        raise Exception("No available free mixer channels!")
 
     def is_free_zmop_index(self, zmop_index):
         """Get next unused zmop index

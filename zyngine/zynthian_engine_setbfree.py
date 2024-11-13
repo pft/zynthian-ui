@@ -315,7 +315,6 @@ class zynthian_engine_setbfree(zynthian_engine):
                         self.processors[i].get_bank_list()
                         self.processors[i].set_bank(0, False)
                         chain.audio_out = []
-                        chain.mixer_chan = None
                     except Exception as e:
                         logging.error(
                             "%s Manual processor can't be added! => %s", manual, e)
@@ -326,7 +325,6 @@ class zynthian_engine_setbfree(zynthian_engine):
                     self.set_midi_chan(self.processors[i])
                     self.processors[i].refresh_controllers()
                     chain.audio_out = []
-                    chain.mixer_chan = None
 
         if self.manuals_split_config:
             # Enable Active MIDI Channel for splitted configurations
@@ -449,9 +447,8 @@ class zynthian_engine_setbfree(zynthian_engine):
                 return
 
         # Disable mixer strip for extra manuals
-        if n > 0:
-            self.state_manager.chain_manager.get_chain(
-                processor.chain_id).mixer_chan = None
+        if n == 0:
+            self.state_manager.chain_manager.add_processor(processor.chain_id, "AM")
 
         self.set_midi_chan(processor)
         super().add_processor(processor)

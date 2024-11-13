@@ -567,6 +567,7 @@ class zynthian_engine(zynthian_basic_engine):
         else:
             logging.warning(
                 "Can't load preset favorites until the engine have a nickname!")
+            self.preset_favs = {}
 
     # ---------------------------------------------------------------------------
     # Controllers Management

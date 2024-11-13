@@ -154,7 +154,7 @@ class zynthian_gui:
         self.status_counter = 0
 
         self.modify_chain_status = {
-            "midi_thru": False, "audio_thru": False, "parallel": False}
+            "midi_thru": False, "audio_thru": False}
 
         self.capture_log_ts0 = None
         self.capture_log_fname = None
@@ -410,7 +410,7 @@ class zynthian_gui:
                         return
                 self.osc_clients[src.hostname] = monotonic()
                 self.state_manager.zynmixer.enable_dpm(
-                    0, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 2, True)
+                    1, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 1, True)
             else:
                 if part2[:6] == "VOLUME":
                     self.state_manager.zynmixer.set_level(
@@ -879,13 +879,10 @@ class zynthian_gui:
                                 self.modify_chain_status["chain_id"], processor, force_bank_preset=True)
                 else:
                     # Adding processor to existing chain
-                    parallel = "parallel" in self.modify_chain_status and self.modify_chain_status[
-                        "parallel"]
-                    post_fader = "post_fader" in self.modify_chain_status and self.modify_chain_status[
-                        "post_fader"]
                     processor = self.chain_manager.add_processor(
-                        self.modify_chain_status["chain_id"], self.modify_chain_status["engine"], parallel=parallel, post_fader=post_fader)
+                        self.modify_chain_status["chain_id"], self.modify_chain_status["engine"])
                     if processor:
+                        zynautoconnect.autoconnect()
                         self.close_screen("loading")
                         self.chain_control(
                             self.modify_chain_status["chain_id"], processor, force_bank_preset=True)
@@ -899,6 +896,8 @@ class zynthian_gui:
                         self.modify_chain_status["midi_thru"] = False
                     if "audio_thru" not in self.modify_chain_status:
                         self.modify_chain_status["audio_thru"] = False
+                    if "fx_loop" not in self.modify_chain_status:
+                        self.modify_chain_status["fx_loop"] = False
                     # Detect MOD-UI special chain and assign dedicated zmop index
                     if self.modify_chain_status["engine"] == "MD":
                         zmop_index = ZMOP_MOD_INDEX
@@ -909,7 +908,8 @@ class zynthian_gui:
                         self.modify_chain_status["midi_chan"],
                         self.modify_chain_status["midi_thru"],
                         self.modify_chain_status["audio_thru"],
-                        zmop_index=zmop_index
+                        self.modify_chain_status["fx_loop"],
+                        zmop_index
                     )
                     if chain_id is None:
                         self.show_screen_reset("audio_mixer")
@@ -919,7 +919,13 @@ class zynthian_gui:
                         chain_id,
                         self.modify_chain_status["engine"]
                     )
-                    # self.modify_chain_status = {"midi_thru": False, "audio_thru": False, "parallel": False}
+                    if self.chain_manager.chains[chain_id].is_audio() and self.chain_manager.chains[chain_id].get_slot_count("Audio Effect") == 0:
+                        am_proc = self.chain_manager.add_processor(chain_id, "AM", eng_config={"fx_loop": self.modify_chain_status["fx_loop"]})
+                        if self.modify_chain_status['fx_loop']:
+                            self.chain_manager.chains[chain_id].set_title(f"FX Return {am_proc.mixer_chan}")
+                    zynautoconnect.request_audio_connect(True)
+                    zynautoconnect.request_midi_connect(True)
+                    # self.modify_chain_status = {"midi_thru": False, "audio_thru": False}
                     if processor:
                         self.close_screen("loading")
                         self.chain_control(
@@ -2604,7 +2610,7 @@ class zynthian_gui:
 
             if not self.osc_clients and self.current_screen != "audio_mixer":
                 self.state_manager.zynmixer.enable_dpm(
-                    0, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 2, False)
+                    1, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 1, False)
 
             # Poll
             zynthian_gui_config.top.after(

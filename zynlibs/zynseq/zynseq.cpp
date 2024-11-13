@@ -57,7 +57,7 @@ static struct ev_start startEvents[128];
 jack_port_t* g_pInputPort;            // Pointer to the JACK input port
 jack_port_t* g_pOutputPort;           // Pointer to the JACK output port
 jack_port_t* g_pMetronomePort;        // Pointer to the JACK metronome audio output port
-jack_client_t* g_pJackClient = NULL;  // Pointer to the JACK client
+jack_client_t* g_jackClient = NULL;  // Pointer to the JACK client
 jack_nframes_t g_nSampleRate = 44100; // Quantity of samples per second
 uint32_t g_nXruns            = 0;
 
@@ -281,7 +281,7 @@ void onJackTimebase(jack_transport_state_t nState, jack_nframes_t nFramesInPerio
             updateBBT(pPosition);
             DPRINTF("Set position from frame %u\n", pPosition->frame);
         }
-        g_nTransportStartFrame = jack_frame_time(g_pJackClient) - pPosition->frame; //!@todo This isn't setting to transport start position
+        g_nTransportStartFrame = jack_frame_time(g_jackClient) - pPosition->frame; //!@todo This isn't setting to transport start position
         pPosition->valid       = JackPositionBBT;
         g_dFramesPerClock      = getFramesPerClock(g_dTempo);
         g_bTimebaseChanged     = false;
@@ -321,7 +321,7 @@ void onJackTimebase(jack_transport_state_t nState, jack_nframes_t nFramesInPerio
     For each event, add MIDI events to the output buffer at appropriate sample sequence
     Remove events from schedule
 */
-int onJackProcess(jack_nframes_t nFrames, void* pArgs) {
+int onJackProcessChan(jack_nframes_t nFrames, void* pArgs) {
     static jack_position_t transportPosition; // JACK transport position structure populated each cycle and checked for transport progress
     static uint8_t nClock = PPQN;             // Clock pulse count 0..PPQN - 1
     static uint32_t nTicksPerPulse;
@@ -336,8 +336,8 @@ int onJackProcess(jack_nframes_t nFrames, void* pArgs) {
     void* pOutputBuffer = jack_port_get_buffer(g_pOutputPort, nFrames);
     unsigned char* pBuffer;
     jack_midi_clear_buffer(pOutputBuffer);
-    jack_nframes_t nNow                        = jack_last_frame_time(g_pJackClient);
-    jack_transport_state_t nState              = jack_transport_query(g_pJackClient, &transportPosition);
+    jack_nframes_t nNow                        = jack_last_frame_time(g_jackClient);
+    jack_transport_state_t nState              = jack_transport_query(g_jackClient, &transportPosition);
 
     jack_default_audio_sample_t* pOutMetronome = (jack_default_audio_sample_t*)jack_port_get_buffer(g_pMetronomePort, nFrames);
     memset(pOutMetronome, 0, sizeof(jack_default_audio_sample_t) * nFrames);
@@ -639,6 +639,9 @@ void end() {
     for (auto it : g_mSchedule) {
         delete it.second;
     }
+    jack_deactivate(g_jackClient);
+    jack_client_close(g_jackClient);
+
 }
 
 // ** Library management functions **
@@ -659,43 +662,43 @@ void init(char* name) {
     jack_status_t nStatus;
     jack_options_t nOptions = JackNoStartServer;
 
-    if (g_pJackClient) {
+    if (g_jackClient) {
         fprintf(stderr, "libzynseq already initialised\n");
         return; // Already initialised
     }
 
-    if ((g_pJackClient = jack_client_open(name, nOptions, &nStatus, sServerName)) == 0) {
+    if ((g_jackClient = jack_client_open(name, nOptions, &nStatus, sServerName)) == 0) {
         fprintf(stderr, "libzynseq failed to start jack client: %d\n", nStatus);
         return;
     }
 
     // Create input port
-    if (!(g_pInputPort = jack_port_register(g_pJackClient, "input", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0))) {
+    if (!(g_pInputPort = jack_port_register(g_jackClient, "input", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0))) {
         fprintf(stderr, "libzynseq cannot register input port\n");
         return;
     }
 
     // Create output port
-    if (!(g_pOutputPort = jack_port_register(g_pJackClient, "output", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0))) {
+    if (!(g_pOutputPort = jack_port_register(g_jackClient, "output", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0))) {
         fprintf(stderr, "libzynseq cannot register output port\n");
         return;
     }
 
     // Create metronome output port
-    if (!(g_pMetronomePort = jack_port_register(g_pJackClient, "metronome", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
+    if (!(g_pMetronomePort = jack_port_register(g_jackClient, "metronome", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
         fprintf(stderr, "linzynseq cannot register metronome port\n");
         return;
     }
 
-    g_nSampleRate     = jack_get_sample_rate(g_pJackClient);
+    g_nSampleRate     = jack_get_sample_rate(g_jackClient);
     g_dFramesPerClock = getFramesPerClock(g_dTempo);
 
     // Register JACK callbacks
-    jack_set_process_callback(g_pJackClient, onJackProcess, 0);
-    jack_set_sample_rate_callback(g_pJackClient, onJackSampleRateChange, 0);
+    jack_set_process_callback(g_jackClient, onJackProcessChan, 0);
+    jack_set_sample_rate_callback(g_jackClient, onJackSampleRateChange, 0);
     //    jack_set_xrun_callback(g_pJackClient, onJackXrun, 0); //!@todo Remove xrun handler (just for debug)
 
-    if (jack_activate(g_pJackClient)) {
+    if (jack_activate(g_jackClient)) {
         fprintf(stderr, "libzynseq cannot activate client\n");
         return;
     }
@@ -1344,7 +1347,7 @@ void setHorizontalZoom(uint16_t zoom) { g_nHorizontalZoom = zoom; }
 // Schedule a MIDI message to be sent in next JACK process cycle
 void sendMidiMsg(MIDI_MESSAGE* pMsg) {
     // Find first available time slot
-    uint32_t time = jack_frames_since_cycle_start(g_pJackClient);
+    uint32_t time = jack_frames_since_cycle_start(g_jackClient);
     while (g_bMutex)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     g_bMutex = true;
@@ -2202,15 +2205,15 @@ bool isSolo(uint8_t bank, uint8_t sequence, uint32_t track) {
 
 void setTransportToStartOfBar() {
     jack_position_t position;
-    jack_transport_query(g_pJackClient, &position);
+    jack_transport_query(g_jackClient, &position);
     position.beat = 1;
     position.tick = 0;
     //    position.valid = JackPositionBBT;
-    jack_transport_reposition(g_pJackClient, &position);
+    jack_transport_reposition(g_jackClient, &position);
     //    g_pNextTimebaseEvent = g_pTimebase->getPreviousTimebaseEvent(position.bar, 1, TIMEBASE_TYPE_ANY); //!@todo Might miss event if 2 at start of bar
 }
 
-void transportLocate(uint32_t frame) { jack_transport_locate(g_pJackClient, frame); }
+void transportLocate(uint32_t frame) { jack_transport_locate(g_jackClient, frame); }
 
 /*  Calculate the song position in frames from BBT
  */
@@ -2251,12 +2254,12 @@ jack_nframes_t transportGetLocation(uint32_t bar, uint32_t beat, uint32_t tick) 
 }
 
 bool transportRequestTimebase() {
-    if (jack_set_timebase_callback(g_pJackClient, 0, onJackTimebase, NULL))
+    if (jack_set_timebase_callback(g_jackClient, 0, onJackTimebase, NULL))
         return false;
     return true;
 }
 
-void transportReleaseTimebase() { jack_release_timebase(g_pJackClient); }
+void transportReleaseTimebase() { jack_release_timebase(g_jackClient); }
 
 void transportStart(const char* client) {
     if (strcmp("zynseq", client)) {
@@ -2265,11 +2268,11 @@ void transportStart(const char* client) {
         g_setTransportClient.emplace(client);
     }
     jack_position_t pos;
-    if (jack_transport_query(g_pJackClient, &pos) != JackTransportRolling)
-        jack_transport_start(g_pJackClient);
+    if (jack_transport_query(g_jackClient, &pos) != JackTransportRolling)
+        jack_transport_start(g_jackClient);
     if (g_nClockSource & TRANSPORT_CLOCK_INTERNAL) {
         // Send MIDI start message
-        jack_nframes_t nClockTime = g_qClockPos.front().first - jack_last_frame_time(g_pJackClient);
+        jack_nframes_t nClockTime = g_qClockPos.front().first - jack_last_frame_time(g_jackClient);
         g_mSchedule.insert(std::pair<uint32_t, MIDI_MESSAGE*>(nClockTime, new MIDI_MESSAGE({MIDI_START, 0, 0})));
     }
 }
@@ -2277,7 +2280,7 @@ void transportStart(const char* client) {
 void transportStop(const char* client) {
     if (strcmp(client, "ALL") == 0) {
         g_setTransportClient.clear();
-        jack_transport_stop(g_pJackClient);
+        jack_transport_stop(g_jackClient);
         return;
     }
     auto itClient = g_setTransportClient.find(std::string(client));
@@ -2285,10 +2288,10 @@ void transportStop(const char* client) {
         g_setTransportClient.erase(itClient);
     g_bClientPlaying = (g_setTransportClient.size() != 0);
     if (!g_bClientPlaying && g_nPlayingSequences == 0)
-        jack_transport_stop(g_pJackClient);
+        jack_transport_stop(g_jackClient);
     if (g_nClockSource & TRANSPORT_CLOCK_INTERNAL) {
         // Send MIDI stop message
-        jack_nframes_t nClockTime = g_qClockPos.front().first - jack_last_frame_time(g_pJackClient);
+        jack_nframes_t nClockTime = g_qClockPos.front().first - jack_last_frame_time(g_jackClient);
         g_mSchedule.insert(std::pair<uint32_t, MIDI_MESSAGE*>(nClockTime, new MIDI_MESSAGE({MIDI_STOP, 0, 0})));
     }
 }
@@ -2303,7 +2306,7 @@ void transportToggle(const char* client) {
 uint8_t transportGetPlayStatus() {
     jack_position_t position; // Not used but required to query transport
     jack_transport_state_t nState;
-    return jack_transport_query(g_pJackClient, &position);
+    return jack_transport_query(g_jackClient, &position);
 }
 
 void setTempo(double tempo) {
@@ -2324,7 +2327,7 @@ void setBeatsPerBar(uint32_t beats) {
 
 uint32_t getBeatsPerBar() { return g_nBeatsPerBar; }
 
-void transportSetSyncTimeout(uint32_t timeout) { jack_set_sync_timeout(g_pJackClient, timeout); }
+void transportSetSyncTimeout(uint32_t timeout) { jack_set_sync_timeout(g_jackClient, timeout); }
 
 void enableMetronome(bool enable) {
     g_bMetronome    = enable;

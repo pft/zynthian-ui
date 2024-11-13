@@ -638,15 +638,12 @@ class zynthian_gui_base(tkinter.Frame):
     def init_dpmeter(self):
         width = int(self.status_l - 2 * self.status_rh - 1)
         height = int(self.status_h / 4 - 2)
-        self.dpm_a = zynthian_gui_dpm(self.zyngui.state_manager.zynmixer, self.zyngui.state_manager.zynmixer.MAX_NUM_CHANNELS -
-                                      1, 0, self.status_canvas, 0, 0, width, height, False, ("status_dpm"))
-        self.dpm_b = zynthian_gui_dpm(self.zyngui.state_manager.zynmixer, self.zyngui.state_manager.zynmixer.MAX_NUM_CHANNELS -
-                                      1, 1, self.status_canvas, 0, height + 2, width, height, False, ("status_dpm"))
+        self.dpm_a = zynthian_gui_dpm(self.zyngui.state_manager.zynmixer, 0, 0, self.status_canvas, 0, 0, width, height, False, ("status_dpm"))
+        self.dpm_b = zynthian_gui_dpm(self.zyngui.state_manager.zynmixer, 0, 1, self.status_canvas, 0, height + 2, width, height, False, ("status_dpm"))
 
     def refresh_status(self):
         if self.shown:
-            mute = self.zyngui.state_manager.zynmixer.get_mute(
-                self.zyngui.state_manager.zynmixer.MAX_NUM_CHANNELS - 1)
+            mute = self.zyngui.state_manager.zynmixer.get_mute(0)
             if True:  # mute != self.main_mute:
                 self.main_mute = mute
                 if mute:
@@ -662,8 +659,7 @@ class zynthian_gui_base(tkinter.Frame):
                         self.status_canvas.itemconfigure(
                             'status_dpm', state=tkinter.NORMAL)
             if not mute and self.dpm_a:
-                state = self.zyngui.state_manager.zynmixer.get_dpm_states(
-                    self.zyngui.state_manager.zynmixer.MAX_NUM_CHANNELS - 1, self.zyngui.state_manager.zynmixer.MAX_NUM_CHANNELS - 1)[0]
+                state = self.zyngui.state_manager.zynmixer.get_dpm_states(0, 0)[0]
                 self.dpm_a.refresh(state[0], state[2], state[4])
                 self.dpm_b.refresh(state[1], state[3], state[4])
 

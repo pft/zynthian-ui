@@ -70,8 +70,6 @@ class fake_port:
 # Define some Constants and Global Variables
 # -------------------------------------------------------------------------------
 
-MAIN_MIX_CHAN = 17 				# TODO: Get this from mixer
-
 jclient = None					# JACK client
 thread = None					# Thread to check for changed MIDI ports
 lock = None						# Manage concurrence
@@ -811,30 +809,23 @@ def audio_autoconnect():
     # Chain audio routing
     for chain_id in chain_manager.chains:
         routes = chain_manager.get_chain_audio_routing(chain_id)
-        normalise = 0 in chain_manager.chains[chain_id].audio_out and chain_manager.chains[0].fader_pos == 0 and len(
-            chain_manager.chains[chain_id].audio_slots) == chain_manager.chains[chain_id].fader_pos
-        state_manager.zynmixer.normalise(
-            chain_manager.chains[chain_id].mixer_chan, normalise)
         for dst in list(routes):
             if isinstance(dst, int):
                 # Destination is a chain
                 route = routes.pop(dst)
                 dst_chain = chain_manager.get_chain(dst)
                 if dst_chain:
-                    if dst_chain.audio_slots and dst_chain.fader_pos:
-                        for proc in dst_chain.audio_slots[0]:
-                            routes[proc.get_jackname()] = route
-                    elif dst_chain.is_synth():
+                    if dst_chain.is_synth():
                         proc = dst_chain.synth_slots[0][0]
                         if proc.type == "Special":
                             routes[proc.get_jackname()] = route
                     else:
-                        if dst == 0:
-                            for name in list(route):
-                                if name.startswith('zynmixer:output'):
-                                    # Use mixer internal normalisation
-                                    route.remove(name)
-                        routes[f"zynmixer:input_{dst_chain.mixer_chan + 1:02d}"] = route
+                        for proc in chain_manager.chains[dst].audio_slots[0]:
+                            #TODO: Handle internal normalisation
+                            jackname = proc.get_jackname()
+                            if jackname.startswith("zynmixer"):
+                                jackname += f":input_{proc.mixer_chan:02d}"
+                            routes[jackname] = route
         for dst in routes:
             if dst in sidechain_ports:
                 # This is an exact match so we do want to route exactly this
@@ -861,16 +852,20 @@ def audio_autoconnect():
                         dst = dst_ports[min(i, dst_count - 1)]
                         required_routes[dst.name].add(src.name)
 
-    # Connect metronome to aux
-    required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}a"].add("zynseq:metronome")
-    required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}b"].add("zynseq:metronome")
 
-    # Connect global audio player to aux
-    if state_manager.audio_player and state_manager.audio_player.jackname:
-        ports = jclient.get_ports(
-            state_manager.audio_player.jackname, is_output=True, is_audio=True)
-        required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}a"].add(ports[0].name)
-        required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}b"].add(ports[1].name)
+    try:
+        # Connect metronome to aux
+        required_routes[f"zynmixer_buses:input_00a"].add("zynseq:metronome")
+        required_routes[f"zynmixer_buses:input_00b"].add("zynseq:metronome")
+
+        # Connect global audio player to aux
+        if state_manager.audio_player and state_manager.audio_player.jackname:
+            ports = jclient.get_ports(
+                state_manager.audio_player.jackname, is_output=True, is_audio=True)
+            required_routes[f"zynmixer_buses:input_00a"].add(ports[0].name)
+            required_routes[f"zynmixer_buses:input_00b"].add(ports[1].name)
+    except Exception as e:
+        logging.warning(e)
 
     # Connect inputs to aubionotes
     if zynthian_gui_config.midi_aubionotes_enabled:
@@ -936,9 +931,9 @@ def audio_connect_ffmpeg(timeout=2.0):
         try:
             # TODO: Do we want post fader, post effects feed?
             jclient.connect(
-                f"zynmixer:output_{MAIN_MIX_CHAN}a", "ffmpeg:input_1")
+                f"zynmixer_buses:input_00a", "ffmpeg:input_1")
             jclient.connect(
-                f"zynmixer:output_{MAIN_MIX_CHAN}b", "ffmpeg:input_2")
+                f"zynmixer_buses:input_00b", "ffmpeg:input_2")
             return
         except:
             sleep(0.1)

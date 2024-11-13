@@ -28,6 +28,7 @@ import logging
 # Zynthian specific modules
 from zyngui import zynthian_gui_config
 from zyngui.zynthian_gui_selector import zynthian_gui_selector
+import zynautoconnect
 
 # ------------------------------------------------------------------------------
 # Zynthian App Selection GUI Class
@@ -43,23 +44,17 @@ class zynthian_gui_main_menu(zynthian_gui_selector):
         self.list_data = []
 
         # Chain & Sequence Management
-        try:
-            self.zyngui.chain_manager.get_next_free_mixer_chan()
-            mixer_avail = True
-        except:
-            mixer_avail = False
         self.list_data.append((None, 0, "> ADD CHAIN"))
-        if mixer_avail:
-            self.list_data.append(
-                (self.add_synth_chain, 0, "Add Instrument Chain"))
-            self.list_data.append((self.add_audiofx_chain, 0, "Add Audio Chain"))
+        self.list_data.append(
+            (self.add_synth_chain, 0, "Add Instrument Chain"))
+        self.list_data.append((self.add_audio_chain, 0, "Add Audio Chain"))
+        self.list_data.append((self.add_audiofx_chain, 0, "Add Audio FX Loop"))
         self.list_data.append((self.add_midifx_chain, 0, "Add MIDI Chain"))
-        if mixer_avail:
-            self.list_data.append(
-                (self.add_midiaudiofx_chain, 0, "Add MIDI+Audio Chain"))
-            self.list_data.append(
-                (self.add_generator_chain, 0, "Add Audio Generator Chain"))
-            self.list_data.append((self.add_special_chain, 0, "Add Special Chain"))
+        self.list_data.append(
+            (self.add_midiaudiofx_chain, 0, "Add MIDI+Audio Chain"))
+        self.list_data.append(
+            (self.add_generator_chain, 0, "Add Audio Generator Chain"))
+        self.list_data.append((self.add_special_chain, 0, "Add Special Chain"))
 
         self.list_data.append((None, 0, "> REMOVE"))
         self.list_data.append((self.remove_sequences, 0, "Remove Sequences"))
@@ -93,9 +88,13 @@ class zynthian_gui_main_menu(zynthian_gui_selector):
         self.zyngui.modify_chain(
             {"type": "MIDI Synth", "midi_thru": False, "audio_thru": False})
 
-    def add_audiofx_chain(self, t='S'):
+    def add_audio_chain(self, t='S'):
         self.zyngui.modify_chain(
             {"type": "Audio Effect", "midi_thru": False, "audio_thru": True})
+
+    def add_audiofx_chain(self, t='S'):
+        self.zyngui.modify_chain(
+            {"type": "Audio Effect", "midi_thru": True, "audio_thru": True, "fx_loop": True})
 
     def add_midifx_chain(self, t='S'):
         self.zyngui.modify_chain(

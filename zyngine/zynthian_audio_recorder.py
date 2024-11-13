@@ -108,14 +108,14 @@ class zynthian_audio_recorder:
         if self.armed:
             for port in sorted(self.armed):
                 cmd.append("--port")
-                cmd.append(f"zynmixer:output_{port + 1:02d}a")
+                cmd.append(f"zynmixer_chans:output_{port + 1:02d}a")
                 cmd.append("--port")
-                cmd.append(f"zynmixer:output_{port + 1:02d}b")
+                cmd.append(f"zynmixer_chans:output_{port + 1:02d}b")
         else:
             cmd.append("--port")
-            cmd.append("zynmixer:output_17a")
+            cmd.append("zynmixer_buses:output_0a")
             cmd.append("--port")
-            cmd.append("zynmixer:output_17b")
+            cmd.append("zynmixer_buses:output_0b")
 
         self.filename = self.get_new_filename()
         cmd.append(self.filename)

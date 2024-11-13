@@ -33,7 +33,8 @@
 /** @brief  Initialises library
  *   @retval int 1 on success, 0 on fail
  */
-int init();
+int init() __attribute__((constructor));
+
 
 /** @brief  Destroy library
  */
@@ -42,95 +43,105 @@ void end();
 /** @brief  Set channel level
  *   @param  channel Index of channel
  *   @param  level Channel level (0..1)
- *   @note   Channel > MAX_CHANNELS will set master fader level
  */
 void setLevel(uint8_t channel, float level);
 
 /** @brief  Get channel level
  *   @param  channel Index of channel
  *   @retval float Channel level (0..1)
- *   @note   Channel > MAX_CHANNELS will retrived master fader level
  */
 float getLevel(uint8_t channel);
 
 /** @brief  Set channel balance
  *   @param  channel Index of channel
  *   @param  pan Channel pan (-1..1)
- *   @note   Channel > MAX_CHANNELS will set master balance
  */
 void setBalance(uint8_t channel, float pan);
 
 /** @brief  Get channel balance
  *   @param  channel Index of channel
  *   @retval float Channel pan (-1..1)
- *   @note   Channel > MAX_CHANNELS will retrived master balance
  */
 float getBalance(uint8_t channel);
 
-/** @brief  Set mute state of channel
+/** @brief  Set channel mute state
  *   @param  channel Index of channel
  *   @param  mute Mute status (0: Unmute, 1: Mute)
  */
 void setMute(uint8_t channel, uint8_t mute);
 
-/** @brief  Get mute state of channel
+/** @brief  Get channel mute state
  *   @param  channel Index of channel
  *   @retval  uint8_t Mute status (0: Unmute, 1: Mute)
  */
 uint8_t getMute(uint8_t channel);
 
-/** @brief  Set solo state of channel
+/** @brief  Set channel solo state
  *   @param  channel Index of channel
  *   @param  solo Solostatus (0: Normal, 1: Solo)
  */
 void setSolo(uint8_t channel, uint8_t solo);
 
-/** @brief  Get solo state of channel
+/** @brief  Get channel solo state
  *   @param  channel Index of channel
  *   @retval  uint8_t Solo status (0: Normal, 1: solo)
  */
 uint8_t getSolo(uint8_t channel);
 
-/** @brief  Toggles mute of a channel
+/** @brief  Toggles channel mute
  *   @param  channel Index of channel
  */
 void toggleMute(uint8_t channel);
 
-/** @brief  Set mono state of channel
+/** @brief  Set channel mono state
  *   @param  channel Index of channel
  *   @param  mono (0: Stereo, 1: Mono)
  */
 void setMono(uint8_t channel, uint8_t mono);
 
-/** @brief  Get mono state of channel
+/** @brief  Get channel mono state
  *   @param  channel Index of channel
  *   @retval uint8_t Channel mono state (0: Stereo, 1: mono)
  */
 uint8_t getMono(uint8_t channel);
 
-/** @brief  Enable MS decode mode
+/** @brief  Set channel MS decode mode
  *   @param  channel Index of channel
  *   @param  enable (0: Stereo, 1: MS decode)
  */
 void setMS(uint8_t channel, uint8_t enable);
 
-/** @brief  Get MS decode mode
+/** @brief  Get channel MS decode mode
  *   @param  channel Index of channel
  *   @retval uint8_t MS decode mode (0: Stereo, 1: MS decode)
  */
 uint8_t getMS(uint8_t channel);
 
-/** @brief  Set phase state of channel
+/** @brief  Set channel phase state
  *   @param  channel Index of channel
  *   @param  phase (0: in phase, 1: phase reversed)
  */
 void setPhase(uint8_t channel, uint8_t phase);
 
-/** @brief  Get phase state of channel
+/** @brief  Get channel phase state
  *   @param  channel Index of channel
  *   @retval uint8_t Channel phase state (0: in phase, 1: phase reversed)
  */
 uint8_t getPhase(uint8_t channel);
+
+/** @brief  Set channel fx send level
+ *   @param  channel Index of channel
+ *   @param  send Index of fx send
+ *   @param  level Channel level (0..1)
+ */
+void setSend(uint8_t channel, uint8_t send, float level);
+
+/** @brief  Get channel fx send level
+ *   @param  channel Index of channel
+ *   @param  send Index of fx send
+ *   @retval float Channel send level
+ */
+float getSend(uint8_t channel, uint8_t send);
 
 /** @brief  Set internal normalisation of channel
  *   @param  channel Index of channel
@@ -148,18 +159,6 @@ uint8_t getNormalise(uint8_t channel, uint8_t enable);
  *   @param  channel Index of channel
  */
 void reset(uint8_t channel);
-
-/** @brief  Check if channel has source routed
- *   @param  channel Index of channel
- *   @retval uint8_t 1 if channel has source routed. 0 if no source routed to channel.
- */
-uint8_t isChannelRouted(uint8_t channel);
-
-/** @brief  Check if channel has output routed
- *   @param  channel Index of channel
- *   @retval uint8_t 1 if channel has output routed. 0 if not routed.
- */
-uint8_t isChannelOutRouted(uint8_t channel);
 
 /** @brief  Get DPM level
  *   @param  channel Index of channel
@@ -201,6 +200,24 @@ int addOscClient(const char* client);
  *   @param  client IP address of client
  */
 void removeOscClient(const char* client);
+
+/** Add a channel strip
+ *  @param  uint8_t grp 1 to create a group otherwise create normal channel strip
+ *  @retval int8_t Index of channel strip or -1 on failure
+ */
+int8_t addStrip(uint8_t grp);
+
+/** @brief  Remove a channel strip
+ *  @param  chan Index of channel strip to remove
+ *  @retval int8_t Index of port removed or -1 on failure
+ */
+int8_t removeStrip(uint8_t chan);
+
+/** @brief  Check if strip is a group
+ *  @param  chan Index of channel strip to check
+ *  @retval int8_t 1 if group, 0 if normal channel, -1 on failure
+*/
+int8_t isGroup(uint8_t chan);
 
 /** @brief Get maximum quantity of channels
  *   @retval size_t Maximum quantity of channels
