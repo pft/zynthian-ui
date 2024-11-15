@@ -149,9 +149,9 @@ class zynthian_gui_mixer_strip():
             f"fader:{self.fader_bg}", f"strip:{self.fader_bg}"), angle=90, anchor="nw", font=self.font_fader)
 
         # DPM
-        self.dpm_a = zynthian_gui_dpm(self.zynmixer, None, 0, self.parent.main_canvas, self.dpm_a_x0, self.dpm_y0,
+        self.dpm_a = zynthian_gui_dpm(self.zynmixer, None, False, 0, self.parent.main_canvas, self.dpm_a_x0, self.dpm_y0,
                                       self.dpm_width, self.fader_height, True, (f"strip:{self.fader_bg}", f"audio_strip:{self.fader_bg}"))
-        self.dpm_b = zynthian_gui_dpm(self.zynmixer, None, 1, self.parent.main_canvas, self.dpm_b_x0, self.dpm_y0,
+        self.dpm_b = zynthian_gui_dpm(self.zynmixer, None, False, 1, self.parent.main_canvas, self.dpm_b_x0, self.dpm_y0,
                                       self.dpm_width, self.fader_height, True, (f"strip:{self.fader_bg}", f"audio_strip:{self.fader_bg}"))
 
         # Solo button
@@ -233,8 +233,8 @@ class zynthian_gui_mixer_strip():
         """ Function to show mixer strip
         """
         if self.chain.is_audio():
-            self.dpm_a.set_strip(self.mixer_proc.mixer_chan)
-            self.dpm_b.set_strip(self.mixer_proc.mixer_chan)
+            self.dpm_a.set_strip(self.mixer_proc.mixer_chan, self.mixer_proc.mixbus)
+            self.dpm_b.set_strip(self.mixer_proc.mixer_chan, self.mixer_proc.mixbus)
         self.parent.main_canvas.itemconfig(f"strip:{self.fader_bg}", state=tkinter.NORMAL)
         try:
             if not self.chain.is_audio():
@@ -701,7 +701,7 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
         super().__init__(has_backbutton=False)
 
         self.zynmixer = self.zyngui.state_manager.zynmixer
-        self.chan2strip = [None] * (self.zynmixer.MAX_NUM_CHANNELS)
+        self.chan2strip = {} # Map of strips, indexed by [channel, mixbus]
         self.highlighted_strip = None  # highligted mixer strip object
         self.moving_chain = False  # True if moving a chain left/right
 
@@ -763,7 +763,7 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
         self.main_mixbus_strip.set_chain(0)
         self.main_mixbus_strip.zctrls = self.zynmixer.processors[0].controllers_dict
 
-        self.zynmixer.enable_dpm(0, 0, False)
+        self.zynmixer.enable_dpm(0, 0, True, False)
 
         self.refresh_visible_strips()
 
@@ -793,7 +793,9 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
         if self.shown:
             if not self.zyngui.osc_clients:
                 self.zynmixer.enable_dpm(
-                    1, self.zynmixer.MAX_NUM_CHANNELS - 1, False)
+                    0, self.zynmixer.MAX_NUM_CHANNELS - 1, False, False)
+                self.zynmixer.enable_dpm(
+                    1, self.zynmixer.MAX_NUM_CHANNELS - 1, True, False)
             zynsigman.unregister(
                 zynsigman.S_AUDIO_MIXER, self.zynmixer.SS_ZCTRL_SET_VALUE, self.update_control)
             zynsigman.unregister(
@@ -816,7 +818,8 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
 
         self.set_title()
         if zynthian_gui_config.enable_dpm:
-            self.zynmixer.enable_dpm(0, self.zynmixer.MAX_NUM_CHANNELS - 1, True)
+            self.zynmixer.enable_dpm(0, self.zynmixer.MAX_NUM_CHANNELS - 1, False, True)
+            self.zynmixer.enable_dpm(0, self.zynmixer.MAX_NUM_CHANNELS - 1, True, True)
         else:
             # Reset all DPM which will not be updated by refresh
             for strip in self.visible_mixer_strips:
@@ -850,16 +853,22 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
         if self.shown:
             super().refresh_status()
             # Update main chain DPM
-            state = self.zynmixer.get_dpm_states(0, 0)[0]
+            state = self.zynmixer.get_dpm_states(0, 0, True)[0]
             self.main_mixbus_strip.draw_dpm(state)
             # Update other chains DPM
             if zynthian_gui_config.enable_dpm:
-                states = self.zynmixer.get_dpm_states(
-                    0, self.zynmixer.MAX_NUM_CHANNELS - 1)
+                chan_states = self.zynmixer.get_dpm_states(
+                    0, self.zynmixer.MAX_NUM_CHANNELS - 1, False)
+                mixbus_states = self.zynmixer.get_dpm_states(
+                    0, self.zynmixer.MAX_NUM_CHANNELS - 1, True)
                 for strip in self.visible_mixer_strips:
                     if not strip.hidden and strip.chain.is_audio():
-                        state = states[strip.mixer_proc.mixer_chan]
-                        strip.draw_dpm(state)
+                        if strip.mixer_proc.mixbus:
+                            state = mixbus_states[strip.mixer_proc.mixer_chan]
+                            strip.draw_dpm(state)
+                        else:
+                            state = chan_states[strip.mixer_proc.mixer_chan]
+                            strip.draw_dpm(state)
 
     def plot_zctrls(self):
         """Function to refresh display (fast)
@@ -869,10 +878,13 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             if ctrl[0]:
                 ctrl[0].draw_control(ctrl[1])
 
-    def update_control(self, chan, symbol, value):
+    def update_control(self, chan, mixbus, symbol, value):
         """Mixer control update signal handler
         """
-        strip = self.chan2strip[chan]
+        try:
+            strip = self.chan2strip[(chan, mixbus)]
+        except:
+            strip = None
         if not strip or not strip.chain or strip.mixer_proc.mixer_chan is None:
             return
         self.pending_refresh_queue.add((strip, symbol))
@@ -889,10 +901,10 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             strip.parent.set_title(
                 f"Balance: {int(value * 100)}% ({strip.chain.get_description(1)})", None, None, 1)
 
-    def update_control_arm(self, chan, value):
+    def update_control_arm(self, chan, mixbus, value):
         """Function to handle audio recorder arm
         """
-        self.update_control(chan, "record", value)
+        self.update_control(chan, mixbus, "record", value)
 
     def update_control_rec(self, state):
         """ Function to handle audio recorder status
@@ -972,8 +984,8 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             strip = self.visible_mixer_strips[strip_index]
             strip.set_chain(chain_id)
             # strip.draw_control()
-            if strip.chain.is_audio() and strip.mixer_proc.mixer_chan < len(self.chan2strip):
-                self.chan2strip[strip.mixer_proc.mixer_chan] = strip
+            if strip.chain.is_audio():
+                self.chan2strip[(strip.mixer_proc.mixer_chan, strip.mixer_proc.mixbus)] = strip
             if chain_id == self.zyngui.chain_manager.active_chain_id:
                 active_strip = strip
             strip_index += 1
@@ -983,7 +995,7 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             strip.set_chain(None)
             strip.zctrls = None
 
-        self.chan2strip[0] = self.main_mixbus_strip
+        self.chan2strip[(0, True)] = self.main_mixbus_strip
         self.main_mixbus_strip.draw_control()
         return active_strip
 

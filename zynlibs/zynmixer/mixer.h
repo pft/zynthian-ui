@@ -42,92 +42,107 @@ void end();
 
 /** @brief  Set channel level
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  level Channel level (0..1)
  */
-void setLevel(uint8_t channel, float level);
+void setLevel(uint8_t channel, uint8_t mixbus, float level);
 
 /** @brief  Get channel level
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @retval float Channel level (0..1)
  */
-float getLevel(uint8_t channel);
+float getLevel(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Set channel balance
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  pan Channel pan (-1..1)
  */
-void setBalance(uint8_t channel, float pan);
+void setBalance(uint8_t channel, uint8_t mixbus, float pan);
 
 /** @brief  Get channel balance
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @retval float Channel pan (-1..1)
  */
-float getBalance(uint8_t channel);
+float getBalance(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Set channel mute state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  mute Mute status (0: Unmute, 1: Mute)
  */
-void setMute(uint8_t channel, uint8_t mute);
+void setMute(uint8_t channel, uint8_t mixbus, uint8_t mute);
 
 /** @brief  Get channel mute state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @retval  uint8_t Mute status (0: Unmute, 1: Mute)
  */
-uint8_t getMute(uint8_t channel);
+uint8_t getMute(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Set channel solo state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  solo Solostatus (0: Normal, 1: Solo)
  */
-void setSolo(uint8_t channel, uint8_t solo);
+void setSolo(uint8_t channel, uint8_t mixbus, uint8_t solo);
 
 /** @brief  Get channel solo state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @retval  uint8_t Solo status (0: Normal, 1: solo)
  */
-uint8_t getSolo(uint8_t channel);
+uint8_t getSolo(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Toggles channel mute
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  */
-void toggleMute(uint8_t channel);
+void toggleMute(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Set channel mono state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  mono (0: Stereo, 1: Mono)
  */
-void setMono(uint8_t channel, uint8_t mono);
+void setMono(uint8_t channel, uint8_t mixbus, uint8_t mono);
 
 /** @brief  Get channel mono state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @retval uint8_t Channel mono state (0: Stereo, 1: mono)
  */
-uint8_t getMono(uint8_t channel);
+uint8_t getMono(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Set channel MS decode mode
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  enable (0: Stereo, 1: MS decode)
  */
-void setMS(uint8_t channel, uint8_t enable);
+void setMS(uint8_t channel, uint8_t mixbus, uint8_t enable);
 
 /** @brief  Get channel MS decode mode
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @retval uint8_t MS decode mode (0: Stereo, 1: MS decode)
  */
-uint8_t getMS(uint8_t channel);
+uint8_t getMS(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Set channel phase state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  phase (0: in phase, 1: phase reversed)
  */
-void setPhase(uint8_t channel, uint8_t phase);
+void setPhase(uint8_t channel, uint8_t mixbus, uint8_t phase);
 
 /** @brief  Get channel phase state
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @retval uint8_t Channel phase state (0: in phase, 1: phase reversed)
  */
-uint8_t getPhase(uint8_t channel);
+uint8_t getPhase(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Set channel fx send level
  *   @param  channel Index of channel
@@ -153,41 +168,46 @@ void setNormalise(uint8_t channel, uint8_t enable);
  *   @param  channel Index of channel
  *   @retval uint8_t 1 if channel normalised
  */
-uint8_t getNormalise(uint8_t channel, uint8_t enable);
+uint8_t getNormalise(uint8_t channel);
 
 /** @brief  Reset a channel to default settings
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  */
-void reset(uint8_t channel);
+void reset(uint8_t channel, uint8_t mixbus);
 
 /** @brief  Get DPM level
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  leg 0 for A leg (left), 1 for B leg (right)
  *   @retval float DPM level
  */
-float getDpm(uint8_t channel, uint8_t leg);
+float getDpm(uint8_t channel, uint8_t mixbus, uint8_t leg);
 
 /** @brief  Get DPM hold level
  *   @param  channel Index of channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  leg 0 for A leg (left), 1 for B leg (right)
  *   @retval float DPM hold level
  */
-float getDpmHold(uint8_t channel, uint8_t leg);
+float getDpmHold(uint8_t channel, uint8_t mixbus, uint8_t leg);
 
 /** @brief  Get DPM state for a set of channels
  *   @param  start Index of the first channel
  *   @param  end Index of the last channel
+ *   @param  mixbus 1 to operate on mixbus else normal input channel
  *   @param  values Pointer to array of floats to hold DPM, hold, and mono status for each channel
  */
-void getDpmStates(uint8_t start, uint8_t end, float* values);
+void getDpmStates(uint8_t start, uint8_t end, uint8_t mixbus, float* values);
 
 /** @brief  Enable / disable peak programme metering
  *   @param  start Index of first channel
  *   @param  end Index of last channel
+ *   @param  mixbus 1 to operate on mixbus DPM else normal channel
  *   @param  enable 1 to enable, 0 to disable
  *   @note   DPM increase CPU processing so may be disabled if this causes issues (like xruns)
  */
-void enableDpm(uint8_t start, uint8_t end, uint8_t enable);
+void enableDpm(uint8_t start, uint8_t end, uint8_t mixbus, uint8_t enable);
 
 /** @brief  Adds client to list of registered OSC clients
  *   @param  client IP address of client
@@ -202,22 +222,17 @@ int addOscClient(const char* client);
 void removeOscClient(const char* client);
 
 /** Add a channel strip
- *  @param  uint8_t grp 1 to create a group otherwise create normal channel strip
+ *  @param  uint8_t mixbus 1 to create a mixbus otherwise create normal channel strip
  *  @retval int8_t Index of channel strip or -1 on failure
  */
-int8_t addStrip(uint8_t grp);
+int8_t addStrip(uint8_t mixbus);
 
 /** @brief  Remove a channel strip
  *  @param  chan Index of channel strip to remove
+ *   @param  enable 1 to enable, 0 to disable
  *  @retval int8_t Index of port removed or -1 on failure
  */
-int8_t removeStrip(uint8_t chan);
-
-/** @brief  Check if strip is a group
- *  @param  chan Index of channel strip to check
- *  @retval int8_t 1 if group, 0 if normal channel, -1 on failure
-*/
-int8_t isGroup(uint8_t chan);
+int8_t removeStrip(uint8_t mixbus, uint8_t chan);
 
 /** @brief Get maximum quantity of channels
  *   @retval size_t Maximum quantity of channels

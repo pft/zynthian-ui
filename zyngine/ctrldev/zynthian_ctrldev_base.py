@@ -221,7 +221,7 @@ class zynthian_ctrldev_zynmixer(zynthian_ctrldev_base):
             zynsigman.S_AUDIO_MIXER, self.zynmixer.SS_ZCTRL_SET_VALUE, self.update_mixer_strip)
         self.light_off()
 
-    def update_mixer_strip(self, chan, symbol, value):
+    def update_mixer_strip(self, chan, mixbus, symbol, value):
         """Update hardware indicators for a mixer strip: mute, solo, level, balance, etc.
         *SHOULD* be implemented by child class
 

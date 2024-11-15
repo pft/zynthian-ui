@@ -53,66 +53,66 @@ class zynthian_engine_audio_mixer(zynthian_engine):
         self.lib_zynmixer = ctypes.cdll.LoadLibrary(
             "/zynthian/zynthian-ui/zynlibs/zynmixer/build/libzynmixer.so")
         self.midi_learn_zctrl = None
-        self.fx_loop = False # Used as temporary flag when adding processor (bodge)
+        self.mixbus = False # Used as temporary flag when adding processor (bodge)
 
         self.lib_zynmixer.addStrip.argtypes = [ctypes.c_uint8]
         self.lib_zynmixer.addStrip.restype = ctypes.c_int8
-        self.lib_zynmixer.removeStrip.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.removeStrip.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.removeStrip.restype = ctypes.c_int8
 
-        self.lib_zynmixer.setLevel.argtypes = [ctypes.c_uint8, ctypes.c_float]
-        self.lib_zynmixer.getLevel.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.setLevel.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_float]
+        self.lib_zynmixer.getLevel.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getLevel.restype = ctypes.c_float
 
-        self.lib_zynmixer.setBalance.argtypes = [
+        self.lib_zynmixer.setBalance.argtypes = [ctypes.c_uint8,
             ctypes.c_uint8, ctypes.c_float]
-        self.lib_zynmixer.getBalance.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.getBalance.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getBalance.restype = ctypes.c_float
 
-        self.lib_zynmixer.setMute.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib_zynmixer.toggleMute.argtypes = [ctypes.c_uint8]
-        self.lib_zynmixer.getMute.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.setMute.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.toggleMute.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getMute.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getMute.restype = ctypes.c_uint8
 
-        self.lib_zynmixer.setMS.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib_zynmixer.getMS.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.setMS.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getMS.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getMS.restypes = ctypes.c_uint8
 
-        self.lib_zynmixer.setSolo.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib_zynmixer.getSolo.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.setSolo.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getSolo.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getSolo.restype = ctypes.c_uint8
 
-        self.lib_zynmixer.setMono.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib_zynmixer.getMono.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.setMono.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getMono.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getMono.restype = ctypes.c_uint8
 
-        self.lib_zynmixer.setPhase.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib_zynmixer.getPhase.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.setPhase.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getPhase.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getPhase.restype = ctypes.c_uint8
 
         self.lib_zynmixer.setSend.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_float]
         self.lib_zynmixer.getSend.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getSend.restype = ctypes.c_float
 
-        self.lib_zynmixer.setNormalise.argtypes = [
-            ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.setNormalise.argtypes = [ctypes.c_uint8,
+            ctypes.c_uint8]
         self.lib_zynmixer.getNormalise.argtypes = [ctypes.c_uint8]
         self.lib_zynmixer.getNormalise.restype = ctypes.c_uint8
 
-        self.lib_zynmixer.reset.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.reset.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
 
-        self.lib_zynmixer.getDpm.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getDpm.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getDpm.restype = ctypes.c_float
 
-        self.lib_zynmixer.getDpmHold.argtypes = [
+        self.lib_zynmixer.getDpmHold.argtypes = [ctypes.c_uint8,
             ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getDpmHold.restype = ctypes.c_float
 
         self.lib_zynmixer.getDpmStates.argtypes = [
-            ctypes.c_uint8, ctypes.c_uint8, ctypes.POINTER(ctypes.c_float)]
+            ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.POINTER(ctypes.c_float)]
 
         self.lib_zynmixer.enableDpm.argtypes = [
-            ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+            ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
 
         self.lib_zynmixer.getMaxChannels.restype = ctypes.c_uint8
 
@@ -132,25 +132,25 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'is_integer': False,
                     'value_max': 1.0,
                     'value_default': 0.8,
-                    'value': self.get_level(processor.mixer_chan),
+                    'value': self.get_level(processor.mixer_chan, processor.mixbus),
                     'processor': processor,
-                    'graph_path': [processor.mixer_chan, 'level']
+                    'graph_path': [processor.mixer_chan, processor.mixbus]
                 }),
                 'balance': zynthian_controller(self, 'balance', {
                     'is_integer': False,
                     'value_min': -1.0,
                     'value_max': 1.0,
                     'value_default': 0.0,
-                    'value': self.get_balance(processor.mixer_chan),
+                    'value': self.get_balance(processor.mixer_chan, processor.mixbus),
                     'processor': processor,
-                    'graph_path': [processor.mixer_chan, 'balance']
+                    'graph_path': [processor.mixer_chan, processor.mixbus]
                 }),
                 'mute': zynthian_controller(self, 'mute', {
                     'is_toggle': True,
                     'value_max': 1,
                     'value_default': 0,
-                    'value': self.get_mute(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan, 'mute'],
+                    'value': self.get_mute(processor.mixer_chan, processor.mixbus),
+                    'graph_path': [processor.mixer_chan, processor.mixbus],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -158,8 +158,8 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'is_toggle': True,
                     'value_max': 1,
                     'value_default': 0,
-                    'value': self.get_solo(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan, 'solo'],
+                    'value': self.get_solo(processor.mixer_chan, processor.mixbus),
+                    'graph_path': [processor.mixer_chan, processor.mixbus],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -167,8 +167,8 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'is_toggle': True,
                     'value_max': 1,
                     'value_default': 0,
-                    'value': self.get_mono(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan, 'mono'],
+                    'value': self.get_mono(processor.mixer_chan, processor.mixbus),
+                    'graph_path': [processor.mixer_chan, processor.mixbus],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -176,8 +176,8 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'is_toggle': True,
                     'value_max': 1,
                     'value_default': 0,
-                    'value': self.get_ms(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan, 'ms'],
+                    'value': self.get_ms(processor.mixer_chan, processor.mixbus),
+                    'graph_path': [processor.mixer_chan, processor.mixbus],
                     'labels': ['off', 'on'],
                     'processor': processor,
                     'name': "M+S"
@@ -186,8 +186,8 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'is_toggle': True,
                     'value_max': 1,
                     'value_default': 0,
-                    'value': self.get_phase(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan, 'phase'],
+                    'value': self.get_phase(processor.mixer_chan, processor.mixbus),
+                    'graph_path': [processor.mixer_chan, processor.mixbus],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -196,7 +196,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1,
                     'value_default': 0,
                     'value': 0,
-                    'graph_path': [processor.mixer_chan, 'record'],
+                    'graph_path': [processor.mixer_chan, processor.mixbus],
                     'processor': processor,
                     'labels': ['off', 'on']
                 })
@@ -210,67 +210,64 @@ class zynthian_engine_audio_mixer(zynthian_engine):
             'value_max': 1.0,
             'value_default': 0.0,
             'value': self.get_send(processor.mixer_chan, send),
-            'graph_path': [processor.mixer_chan, "send", send]
+            'graph_path': [processor.mixer_chan, send]
         })
         processor.ctrl_screens_dict[f"send {send}"] = [processor.controllers_dict[symbol]]
 
     def add_processor(self, processor):
         self.processors.append(processor)
-        processor.fx_loop = processor.engine.fx_loop
+        processor.mixbus = processor.engine.mixbus
         if processor.chain_id:
-            processor.mixer_chan = self.add_strip(processor.fx_loop)
+            processor.mixer_chan = self.add_strip(processor.mixbus)
         else:
             processor.mixer_chan = 0
-        if processor.fx_loop or processor.chain_id == 0:
+        if processor.mixbus or processor.chain_id == 0:
             processor.jackname = "zynmixer_buses"
         else:
             processor.jackname = "zynmixer_chans"
         processor.refresh_controllers()
-        if not processor.fx_loop:
+        if not processor.mixbus:
             for proc in self.processors:
-                if proc.chain_id and proc.fx_loop:
+                if proc.chain_id and proc.mixbus:
                     self.update_fx_send(processor, proc.mixer_chan)
         return
 
     def remove_processor(self, processor):
         super().remove_processor(processor)
-        self.lib_zynmixer.removeStrip(processor.mixer_chan)
+        self.lib_zynmixer.removeStrip(processor.mixer_chan, processor.mixbus)
 
     def set_extended_config(self, config):
         if config is None:
             return
-        if "fx_loop" in config:
-            self.fx_loop = config["fx_loop"]
+        if "mixbus" in config:
+            self.mixbus = config["mixbus"]
 
     def send_controller_value(self, zctrl):
         try:
-            if zctrl.graph_path[1] == "send":
-                self.set_send(zctrl.graph_path[0], zctrl.graph_path[2], zctrl.value, False)
+            if zctrl.symbol.startswith("send"):
+                self.set_send(zctrl.graph_path[0], zctrl.graph_path[1], zctrl.value)
             elif zctrl.symbol == "record":
-                if zctrl.value:
-                    self.state_manager.audio_recorder.arm(zctrl.graph_path[0])
-                else:
-                    self.state_manager.audio_recorder.unarm(zctrl.graph_path[0])
+                self.state_manager.audio_recorder.arm(zctrl.graph_path[0], zctrl.graph_path[1], zctrl.value)
             else:
                 getattr(self, f'set_{zctrl.symbol}')(
-                    zctrl.graph_path[0], zctrl.value, False)
+                    zctrl.graph_path[0], zctrl.graph_path[1], zctrl.value)
         except Exception as e:
             logging.warning(e)
 
-    def add_strip(self, fx_loop=False):
-        strip = self.lib_zynmixer.addStrip(fx_loop)
-        if fx_loop:
+    def add_strip(self, mixbus=False):
+        strip = self.lib_zynmixer.addStrip(mixbus)
+        if mixbus:
             for proc in self.processors:
-                if not proc.fx_loop:
+                if not proc.mixbus:
                     self.update_fx_send(proc, strip)                    
         return strip
 
-    def remove_strip(self, chan):
-        return self.lib_zynmixer.removeStrip(chan)
+    def remove_strip(self, chan, mixbus):
+        return self.lib_zynmixer.removeStrip(chan, mixbus)
 
     def get_path(self, processor):
         if processor.chain_id:
-            if processor.fx_loop:
+            if processor.mixbus:
                 return f"FX Send {processor.chain_id}"
             else:
                 return f"Mixer Channel {processor.chain_id}"
@@ -278,179 +275,168 @@ class zynthian_engine_audio_mixer(zynthian_engine):
 
     # Function to set fader level for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # level: Fader value (0..+1)
-    # update: True for update controller
 
-    def set_level(self, channel, level, update=True):
+    def set_level(self, channel, mixbus, level):
         if channel is None:
             return
-        self.lib_zynmixer.setLevel(channel, ctypes.c_float(level))
-        if update:
-            self.zctrls[channel]['level'].set_value(level, False)
+        self.lib_zynmixer.setLevel(channel, mixbus, ctypes.c_float(level))
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="level", value=level)
+                       chan=channel, mixbus=mixbus, symbol="level", value=level)
 
     # Function to get fader level for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: Fader level (0..+1)
-    def get_level(self, channel):
+    def get_level(self, channel, mixbus):
         if channel is None:
             return
-        return self.lib_zynmixer.getLevel(channel)
+        return self.lib_zynmixer.getLevel(channel, mixbus)
 
     # Function to set balance for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # balance: Balance value (-1..+1)
-    # update: True for update controller
-    def set_balance(self, channel, balance, update=True):
+    def set_balance(self, channel, mixbus, balance):
         if channel is None:
             return
-        self.lib_zynmixer.setBalance(channel, ctypes.c_float(balance))
-        if update:
-            self.zctrls[channel]['balance'].set_value(balance, False)
+        self.lib_zynmixer.setBalance(channel, mixbus, ctypes.c_float(balance))
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="balance", value=balance)
+                       chan=channel, mixbus=mixbus, symbol="balance", value=balance)
 
     # Function to get balance for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: Balance value (-1..+1)
-    def get_balance(self, channel):
+    def get_balance(self, channel, mixbus):
         if channel is None:
             return
-        return self.lib_zynmixer.getBalance(channel)
+        return self.lib_zynmixer.getBalance(channel, mixbus)
 
     # Function to set mute for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # mute: Mute state (True to mute)
-    # update: True for update controller
-    def set_mute(self, channel, mute, update=False):
+    def set_mute(self, channel, mixbus, mute):
         if channel is None:
             return
-        self.lib_zynmixer.setMute(channel, mute)
-        if update:
-            self.zctrls[channel]['mute'].set_value(mute, False)
+        self.lib_zynmixer.setMute(channel, mixbus, mute)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="mute", value=mute)
+                       chan=channel, mixbus=mixbus, symbol="mute", value=mute)
 
     # Function to get mute for a channel
     # channel: Index of channel
     # returns: Mute state (True if muted)
-    def get_mute(self, channel, update=False):
+    def get_mute(self, channel, mixbus):
         if channel is None:
             return
-        return self.lib_zynmixer.getMute(channel)
+        return self.lib_zynmixer.getMute(channel, mixbus)
 
     # Function to toggle mute of a channel
     # channel: Index of channel
-    # update: True for update controller
-    def toggle_mute(self, channel, update=False):
-        self.lib_zynmixer.toggleMute(channel)
-        mute = self.lib_zynmixer.getMute(channel)
-        if update:
-            self.zctrls[channel]['mute'].set_value(mute, False)
+    # mixbus: True to operate on mixbus else normal input channel
+    def toggle_mute(self, channel, mixbus):
+        self.lib_zynmixer.toggleMute(channel, mixbus)
+        mute = self.lib_zynmixer.getMute(channel, mixbus)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="mute", value=mute)
+                       chan=channel, mixbus=mixbus, symbol="mute", value=mute)
 
     # Function to set phase reversal for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # phase: Phase reversal state (True to reverse)
-    # update: True for update controller
-    def set_phase(self, channel, phase, update=True):
+    def set_phase(self, channel, mixbus, phase):
         if channel is None:
             return
-        self.lib_zynmixer.setPhase(channel, phase)
-        if update:
-            self.zctrls[channel]['phase'].set_value(phase, False)
+        self.lib_zynmixer.setPhase(channel, mixbus, phase)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="phase", value=phase)
+                       chan=channel, mixbus=mixbus, symbol="phase", value=phase)
 
     # Function to get phase reversal for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: Phase reversal state (True if phase reversed)
-    def get_phase(self, channel):
+    def get_phase(self, channel, mixbus):
         if channel is None:
             return
-        return self.lib_zynmixer.getPhase(channel)
+        return self.lib_zynmixer.getPhase(channel, mixbus)
 
     # Function to toggle phase reversal of a channel
     # channel: Index of channel
-    # update: True for update controller
-    def toggle_phase(self, channel, update=True):
+    # mixbus: True to operate on mixbus else normal input channel
+    def toggle_phase(self, channel, mixbus):
         if channel is None:
             return
-        self.lib_zynmixer.togglePhase(channel)
-        phase = self.lib_zynmixer.getPhase(channel)
-        if update:
-            self.zctrls[channel]['phase'].set_value(phase, False)
+        self.lib_zynmixer.togglePhase(channel, mixbus)
+        phase = self.lib_zynmixer.getPhase(channel, mixbus)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="phase", value=phase)
+                       chan=channel, mixbus=mixbus, symbol="phase", value=phase)
 
     # Function to set solo for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # solo: Solo state (True to solo)
-    # update: True for update controller
-    def set_solo(self, channel, solo, update=True):
+    def set_solo(self, channel, mixbus, solo):
         if channel is None:
             return
-        self.lib_zynmixer.setSolo(channel, solo)
-        if update:
-            #TODO: Get correct channel/processor
-            self.processors[channel].controllers_dict['solo'].set_value(solo, False)
-        if channel:
+        self.lib_zynmixer.setSolo(channel, mixbus, solo)
+        if channel or not mixbus:
             zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="solo", value=solo)
+                       chan=channel, mixbus=mixbus, symbol="solo", value=solo)
         else:
             # Main strip solo clears all chain solo
             for proc in self.processors:
                 proc.controllers_dict["solo"].set_value(0, False)
                 zynsigman.send(
-                    zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE, chan=proc.mixer_chan, symbol="solo", value=0)
+                    zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE, chan=proc.mixer_chan, mixbus=proc.mixbus, symbol="solo", value=0)
 
     # Function to get solo for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: Solo state (True if solo)
-    def get_solo(self, channel):
+    def get_solo(self, channel, mixbus):
         if channel is None:
-            return
-        return self.lib_zynmixer.getSolo(channel) == 1
+            return False
+        return self.lib_zynmixer.getSolo(channel, mixbus) == 1
 
     # Function to toggle mute of a channel
     # channel: Index of channel
-    # update: True for update controller
-    def toggle_solo(self, channel, update=True):
+    # mixbus: True to operate on mixbus else normal input channel
+    def toggle_solo(self, channel, mixbus):
         if channel is None:
             return
-        if self.get_solo(channel):
-            self.set_solo(channel, False)
+        if self.get_solo(channel, mixbus):
+            self.set_solo(channel, mixbus, False)
         else:
-            self.set_solo(channel, True)
+            self.set_solo(channel, mixbus, True)
 
     # Function to mono a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # mono: Mono state (True to solo)
-    # update: True for update controller
-    def set_mono(self, channel, mono, update=True):
+    def set_mono(self, channel, mixbus, mono):
         if channel is None:
             return
-        self.lib_zynmixer.setMono(channel, mono)
-        if update:
-            self.zctrls[channel]['mono'].set_value(mono, False)
+        self.lib_zynmixer.setMono(channel, mixbus, mono)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="mono", value=mono)
+                       chan=channel, mixbus=mixbus, symbol="mono", value=mono)
 
     # Function to get mono for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: Mono state (True if mono)
-    def get_mono(self, channel):
+    def get_mono(self, channel, mixbus):
         if channel is None:
             return
-        return self.lib_zynmixer.getMono(channel) == 1
+        return self.lib_zynmixer.getMono(channel, mixbus)
 
     # Function to get all mono
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: List of mono states (True if mono)
-    def get_all_monos(self):
+    def get_all_monos(self, mixbus):
         monos = (ctypes.c_bool * (self.MAX_NUM_CHANNELS))()
-        self.lib_zynmixer.getAllMono(monos)
+        self.lib_zynmixer.getAllMono(monos, mixbus)
         result = []
         for i in monos:
             result.append(i)
@@ -458,71 +444,61 @@ class zynthian_engine_audio_mixer(zynthian_engine):
 
     # Function to toggle mono of a channel
     # channel: Index of channel
-    # update: True for update controller
-    def toggle_mono(self, channel, update=True):
+    # mixbus: True to operate on mixbus else normal input channel
+    def toggle_mono(self, channel, mixbus):
         if channel is None:
             return
-        if self.get_mono(channel):
-            self.set_mono(channel, False)
+        if self.get_mono(channel, mixbus):
+            self.set_mono(channel, mixbus, False)
         else:
-            self.set_mono(channel, True)
-        if update:
-            self.zctrls[channel]['mono'].set_value(
-                self.lib_zynmixer.getMono(channel), False)
+            self.set_mono(channel, mixbus, True)
 
     # Function to enable M+S mode
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # enable: M+S state (True to enable)
-    # update: True for update controller
-
-    def set_ms(self, channel, enable, update=True):
+    def set_ms(self, channel, mixbus, enable):
         if channel is None:
             return
-        self.lib_zynmixer.setMS(channel, enable)
-        if update:
-            self.zctrls[channel]['ms'].set_value(enable, False)
+        self.lib_zynmixer.setMS(channel, mixbus, enable)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
-                       chan=channel, symbol="ms", value=enable)
+                       chan=channel, mixbus=mixbus, symbol="ms", value=enable)
 
     # Function to get M+S mode
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: M+S mode (True if enabled)
-    def get_ms(self, channel):
+    def get_ms(self, channel, mixbus):
         if channel is None:
             return
-        return self.lib_zynmixer.getMS(channel) == 1
+        return self.lib_zynmixer.getMS(channel, mixbus) == 1
 
     # Function to toggle M+S mode
     # channel: Index of channel
-    # update: True for update controller
-    def toggle_ms(self, channel, update=True):
+    # mixbus: True to operate on mixbus else normal input channel
+    def toggle_ms(self, channel, mixbus):
         if channel is None:
             return
-        if self.get_ms(channel):
-            self.set_ms(channel, False)
+        if self.get_ms(channel, mixbus):
+            self.set_ms(channel, mixbus, False)
         else:
-            self.set_ms(channel, True)
-        if update:
-            self.zctrls[channel]['ms'].set_value(
-                self.lib_zynmixer.getMS(channel), False)
+            self.set_ms(channel, mixbus, True)
 
     # Function to set fx send level for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # send: Index of fx send
     # level: Fader value (0..+1)
-    # update: True for update controller
-
-    def set_send(self, channel, send, level, update=True):
+    def set_send(self, channel, send, level):
         if channel is None or send is None:
             return
         self.lib_zynmixer.setSend(channel, send, ctypes.c_float(level))
-        if update:
-            self.zctrls[channel][f'send_{send:02d}'].set_value(level, False)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, self.SS_ZCTRL_SET_VALUE,
                        chan=channel, symbol=f"send_{send:02d}", value=level)
 
     # Function to get fx send level for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # send: Index of fx send
     # returns: Send level (0..+1)
     def get_send(self, channel, send):
@@ -530,50 +506,51 @@ class zynthian_engine_audio_mixer(zynthian_engine):
             return
         return self.lib_zynmixer.getSend(channel, send)
 
-    # Function to set internal normalisation of a channel when its direct output is not routed
+    # Function to set internal normalisation of a channel
     # channel: Index of channel
     # enable: True to enable internal normalisation
     def normalise(self, channel, enable):
         if channel is None:
             return
-        if channel == 0:
-            return  # Don't allow normalisation of main mixbus (to itself)
         self.lib_zynmixer.setNormalise(channel, enable)
 
-    # Function to get the internal normalisation state of s channel
+    # Function to get the internal normalisation state of a channel
     # channel: Index of channel
-    # enable: True to enable internal normalisation
-    # update: True for update controller
+    # mixbus: True to operate on mixbus else normal input channel
+    # Returns: True if normalised
     def is_normalised(self, channel):
         if channel is None:
             return False
-        return self.lib_zynmixer.getNormalise(channel)
+        return self.lib_zynmixer.getNormalise(channel) == 1
 
     # Function to get peak programme level for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # leg: 0 for A-leg (left), 1 for B-leg (right)
     # returns: Peak programme level
-    def get_dpm(self, channel, leg):
+    def get_dpm(self, channel, mixbus, leg):
         if channel is None:
             return
-        return self.lib_zynmixer.getDpm(channel, leg)
+        return self.lib_zynmixer.getDpm(channel, mixbus, leg)
 
     # Function to get peak programme hold level for a channel
     # channel: Index of channel
+    # mixbus: True to operate on mixbus else normal input channel
     # leg: 0 for A-leg (left), 1 for B-leg (right)
     # returns: Peak programme hold level
-    def get_dpm_holds(self, channel, leg):
+    def get_dpm_holds(self, channel, mixbus, leg):
         if channel is None:
             return
-        return self.lib_zynmixer.getDpmHold(channel, leg)
+        return self.lib_zynmixer.getDpmHold(channel, mixbus, leg)
 
     # Function to get the dpm states for a set of channels
     # start: Index of first channel
     # end: Index of last channel
+    # mixbus: True to operate on mixbus else normal input channel
     # returns: List of tuples containing (dpm_a, dpm_b, hold_a, hold_b, mono)
-    def get_dpm_states(self, start, end):
+    def get_dpm_states(self, start, end, mixbus):
         state = (ctypes.c_float * (5 * (end - start + 1)))()
-        self.lib_zynmixer.getDpmStates(start, end, state)
+        self.lib_zynmixer.getDpmStates(start, end, mixbus, state)
         result = []
         offset = 0
         for channel in range(start, end + 1):
@@ -589,11 +566,12 @@ class zynthian_engine_audio_mixer(zynthian_engine):
     # Function to enable or disable digital peak meters
     # start: First mixer channel
     # end: Last mixer channel
+    # mixbus: True to operate on mixbuses else normal inputs
     # enable: True to enable
-    def enable_dpm(self, start, end, enable):
+    def enable_dpm(self, start, end, mixbus, enable):
         if start is None or end is None:
             return
-        self.lib_zynmixer.enableDpm(start, end, int(enable))
+        self.lib_zynmixer.enableDpm(start, end, mixbus, enable, int(enable))
 
     # Function to add OSC client registration
     # client: IP address of OSC client
@@ -608,6 +586,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
 
     def reset(self):
         for channel in range(self.MAX_NUM_CHANNELS):
-            self.lib_zynmixer.reset(channel)
+            self.lib_zynmixer.reset(channel, False)
+            self.lib_zynmixer.reset(channel, True)
 
 # -------------------------------------------------------------------------------

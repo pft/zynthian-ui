@@ -78,7 +78,7 @@ class zynthian_gui_chain_options(zynthian_gui_selector):
             # TODO Disable midi learn for some chains???
             self.list_data.append((self.clean_midi_learn, None, "Clean MIDI Learn"))
 
-        if self.chain.audio_thru and self.chain_id != 0 and not self.chain.fx_loop:
+        if self.chain.audio_thru and self.chain_id != 0 and not self.chain.mixbus:
             self.list_data.append((self.chain_audio_capture, None, "Audio In"))
 
         if self.chain.is_audio():

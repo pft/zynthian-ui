@@ -234,7 +234,7 @@ class zynthian_state_manager:
         self.reload_midi_config()
         self.create_audio_player()
         self.chain_manager.add_chain(0)
-        self.zynmixer = self.chain_manager.add_processor(0, "AM", eng_config={"fx_loop":True}).engine
+        self.zynmixer = self.chain_manager.add_processor(0, "AM", eng_config={"mixbus":True}).engine
         self.exit_flag = False
         self.slow_thread = Thread(target=self.slow_thread_task)
         self.slow_thread.name = "Status Manager Slow"
@@ -305,7 +305,7 @@ class zynthian_state_manager:
         sequences : True for cleaning zynseq state (sequences)
         """
 
-        self.zynmixer.set_mute(0, 1)
+        self.zynmixer.set_mute(0, True, 1)
         # self.zynseq.transport_stop("ALL")
         self.zynseq.libseq.stop()
         if zynseq:
@@ -319,7 +319,7 @@ class zynthian_state_manager:
             zynautoconnect.request_midi_connect(True)
             zynautoconnect.request_audio_connect(True)
             zynautoconnect.resume()
-        self.zynmixer.set_mute(0, 0)
+        self.zynmixer.set_mute(0, True, 0)
 
     def clean_all(self):
         """Remove ALL Chains & Sequences."""
@@ -1088,14 +1088,14 @@ class zynthian_state_manager:
             self.end_busy("load snapshot")
             return None
 
-        mute = self.zynmixer.get_mute(0)
+        mute = self.zynmixer.get_mute(0, True)
         try:
             snapshot = JSONDecoder().decode(json)
             state = self.fix_snapshot(snapshot)
 
             if load_chains:
                 # Mute output to avoid unwanted noises
-                self.zynmixer.set_mute(0, True)
+                self.zynmixer.set_mute(0, True, True)
 
                 zynautoconnect.pause()
                 if "chains" in state:
@@ -1220,7 +1220,7 @@ class zynthian_state_manager:
         zynautoconnect.request_audio_connect(True)
 
         # Restore mute state
-        self.zynmixer.set_mute(0, mute)
+        self.zynmixer.set_mute(0, True, mute)
 
         # Signal snapshot loading
         zynsigman.send_queued(zynsigman.S_STATE_MAN, self.SS_LOAD_SNAPSHOT)

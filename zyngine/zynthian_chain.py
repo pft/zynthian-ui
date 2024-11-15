@@ -37,7 +37,7 @@ class zynthian_chain:
     # Initialization
     # ------------------------------------------------------------------------
 
-    def __init__(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False, fx_loop=False):
+    def __init__(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False, mixbus=False):
         """ Create an instance of a chain
 
         A chain contains zero or more slots.
@@ -51,7 +51,7 @@ class zynthian_chain:
         midi_chan : Optional MIDI channel for chain input / control
         midi_thru : True to enable MIDI thru for empty chain
         audio_thru : True to enable audio thru for empty chain
-        fx_loop: True to configure as an effects loop chain
+        mixbus: True to configure as an effects loop chain
         """
 
         # Each slot contains a list of parallel processors
@@ -66,7 +66,7 @@ class zynthian_chain:
         self.zmop_index = None
         self.midi_thru = midi_thru  # True to pass MIDI if chain empty
         self.audio_thru = audio_thru  # True to pass audio if chain empty
-        self.fx_loop = fx_loop # True if chain is fed from fxsend and feeds fxreturn
+        self.mixbus = mixbus # True if chain is fed from fxsend and feeds fxreturn
         self.midi_in = []
         self.midi_out = []
         self.audio_in = []
@@ -97,7 +97,7 @@ class zynthian_chain:
             self.audio_thru = True
         else:
             self.title = ""
-            if self.fx_loop:
+            if self.mixbus:
                 self.audio_in = [] #TODO: Should this be fx send?
             elif self.audio_thru:
                 self.audio_in = [1, 2]
@@ -300,7 +300,7 @@ class zynthian_chain:
                     if self.synth_slots:
                         for proc in self.synth_slots[-1]:
                             sources.append(proc.get_jackname())
-                    elif self.fx_loop:
+                    elif self.mixbus:
                         for am_slot in self.audio_slots:
                             if am_slot[0].eng_code == "AM":
                                 sources = [f"zynmixer_chans:send_{am_slot[0].mixer_chan:02d}"]

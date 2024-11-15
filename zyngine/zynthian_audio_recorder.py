@@ -51,7 +51,7 @@ class zynthian_audio_recorder:
             'ZYNTHIAN_EX_DATA_DIR', "/media/root")
         self.rec_proc = None
         self.status = False
-        self.armed = set()  # List of chains armed to record
+        self.armed = set()  # List of jack sources armed to record
         self.state_manager = state_manager
         self.filename = None
 
@@ -76,27 +76,32 @@ class zynthian_audio_recorder:
             index += 1
         return "{}/{}.{:03d}.wav".format(path, filename, index)
 
-    def arm(self, channel):
-        self.armed.add(channel)
-        zynsigman.send(zynsigman.S_AUDIO_RECORDER,
-                       self.SS_AUDIO_RECORDER_ARM, chan=channel, value=True)
-
-    def unarm(self, channel):
-        try:
-            self.armed.remove(channel)
-            zynsigman.send(zynsigman.S_AUDIO_RECORDER,
-                           self.SS_AUDIO_RECORDER_ARM, chan=channel, value=False)
-        except:
-            logging.info("Channel %d not armed", channel)
-
-    def toggle_arm(self, channel):
-        if self.is_armed(channel):
-            self.unarm(channel)
+    def arm(self, channel, mixbus, arm):
+        if mixbus:
+            src = f"zynmixer_buses:output_{channel:02d}"
         else:
-            self.arm(channel)
+            src = f"zynmixer_chans:output_{channel:02d}"
+        if arm:
+            self.armed.add(src)
+            zynsigman.send(zynsigman.S_AUDIO_RECORDER,
+                self.SS_AUDIO_RECORDER_ARM, chan=channel, mixbus=mixbus, value=True)
+        else:
+            try:
+                self.armed.remove(src)
+                zynsigman.send(zynsigman.S_AUDIO_RECORDER,
+                            self.SS_AUDIO_RECORDER_ARM, chan=channel, mixbus=mixbus, value=False)
+            except:
+                logging.info("%s not armed", src)
 
-    def is_armed(self, channel):
-        return channel in self.armed
+    def toggle_arm(self, channel, mixbus):
+        self.arm(channel, mixbus, not self.is_armed(channel, mixbus))
+
+    def is_armed(self, channel, mixbus):
+        if mixbus:
+            src = f"zynmixer_buses:output_{channel:02d}"
+        else:
+            src = f"zynmixer_chans:output_{channel:02d}"
+        return src in self.armed
 
     def start_recording(self, processor=None):
         if self.rec_proc:
@@ -108,14 +113,14 @@ class zynthian_audio_recorder:
         if self.armed:
             for port in sorted(self.armed):
                 cmd.append("--port")
-                cmd.append(f"zynmixer_chans:output_{port + 1:02d}a")
+                cmd.append(f"{port}a")
                 cmd.append("--port")
-                cmd.append(f"zynmixer_chans:output_{port + 1:02d}b")
+                cmd.append(f"{port}b")
         else:
             cmd.append("--port")
-            cmd.append("zynmixer_buses:output_0a")
+            cmd.append("zynmixer_buses:output_00a")
             cmd.append("--port")
-            cmd.append("zynmixer_buses:output_0b")
+            cmd.append("zynmixer_buses:output_00b")
 
         self.filename = self.get_new_filename()
         cmd.append(self.filename)

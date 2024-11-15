@@ -808,6 +808,9 @@ def audio_autoconnect():
 
     # Chain audio routing
     for chain_id in chain_manager.chains:
+        chain = chain_manager.get_chain(chain_id)
+        if not chain.is_audio():
+            continue
         routes = chain_manager.get_chain_audio_routing(chain_id)
         for dst in list(routes):
             if isinstance(dst, int):
@@ -821,7 +824,7 @@ def audio_autoconnect():
                             routes[proc.get_jackname()] = route
                     else:
                         for proc in chain_manager.chains[dst].audio_slots[0]:
-                            #TODO: Handle internal normalisation
+                            #TODO: Handle empty chain
                             jackname = proc.get_jackname()
                             if jackname.startswith("zynmixer"):
                                 jackname += f":input_{proc.mixer_chan:02d}"
@@ -888,6 +891,18 @@ def audio_autoconnect():
     if len(hp_ports) >= 2:
         required_routes[hp_ports[0].name] = required_routes[hw_audio_dst_ports[0].name]
         required_routes[hp_ports[1].name] = required_routes[hw_audio_dst_ports[1].name]
+
+    # Enable zynmixer internal normalised routes and remove corresponding jack graph connections
+    if "zynmixer_buses:input_00a" in required_routes and "zynmixer_buses:input_00b" in required_routes:
+        for chan in range(state_manager.zynmixer.MAX_NUM_CHANNELS):
+            bus_route_a = f"zynmixer_buses:output_{chan:02d}a"
+            bus_route_b = f"zynmixer_buses:output_{chan:02d}b"
+            if bus_route_a in required_routes["zynmixer_buses:input_00a"] and bus_route_b in required_routes["zynmixer_buses:input_00b"]:
+                required_routes["zynmixer_buses:input_00a"].remove(bus_route_a)
+                required_routes["zynmixer_buses:input_00b"].remove(bus_route_b)
+                state_manager.zynmixer.normalise(chan, 1)
+            else:
+                state_manager.zynmixer.normalise(chan, 0)
 
     # Connect and disconnect routes
     for dst, sources in required_routes.items():
