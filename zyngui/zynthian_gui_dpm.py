@@ -30,12 +30,9 @@ from zyngui.zynthian_gui_config import color_panel_bg
 
 class zynthian_gui_dpm():
 
-    def __init__(self, zynmixer, strip, mixbus, channel, parent, x0, y0, width, height, vertical=True, tags=()):
+    def __init__(self, channel, parent, x0, y0, width, height, vertical=True, tags=()):
         """Initialise digital peak meter
 
-        zynmixer : zynmixer engine object		
-        strip : Audio mixer strip
-        mixbus: True if mixbus else normal input channel
         channel : Audio channel (0=A/Left, 1=B/Right)
         parent : Frame object within which to draw meter
         x0 : X coordinate of top left corner
@@ -46,9 +43,8 @@ class zynthian_gui_dpm():
         tags : Optional list of tags for external control of GUI
         """
 
-        self.zynmixer = zynmixer
-        self.strip = strip  # Audio mixer strip
-        self.mixbus = mixbus # True for mixbus, False for normal input channel
+        self.enabled = False
+        self.mono = False
         self.channel = channel  # Audio channel 0=A, 1=B
         self.parent = parent
         self.x0 = x0
@@ -118,18 +114,10 @@ class zynthian_gui_dpm():
             self.parent.create_line(
                 x_zero, self.y0, x_zero, self.y1, fill=self.line_color, tags=tags)
 
-    def set_strip(self, strip, mixbus=False):
-        """Set the mixer channel strip
-
-        strip : Mixer channel strip
-        mixbus: True for mixbus, False for normal input channel
-        """
-        self.strip = strip
-        self.mixbus = mixbus
+    def set_enable(self, enable):
+        self.enabled = enable
 
     def refresh(self, dpm, hold, mono):
-        if self.strip is None:
-            return
         if mono != self.mono:
             self.mono = mono
             if mono:
@@ -173,7 +161,7 @@ class zynthian_gui_dpm():
                 self.parent.itemconfig(
                     self.hold, state=NORMAL, fill=self.high_hold_color)
             elif x0 > self.x_low:
-                if self.zynmixer.get_mono(self.strip, self.mixbus):
+                if self.mono:
                     self.parent.itemconfig(
                         self.hold, state=NORMAL, fill=self.mono_hold_color)
                 else:

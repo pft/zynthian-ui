@@ -846,10 +846,10 @@ class zynthian_chain_manager:
 
         if chain.is_audio():
             # Audio chain so mute main output whilst making change (blunt but effective)
-            mute = self.state_manager.zynmixer.get_mute(0, True)
-            self.state_manager.zynmixer.set_mute(0, True, True, False)
+            mute = self.state_manager.zynmixer_bus.get_mute(0, True)
+            self.state_manager.zynmixer_bus.set_mute(0, True, True, False)
             zynautoconnect.request_audio_connect(True)
-            self.state_manager.zynmixer.set_mute(0, True, mute, False)
+            self.state_manager.zynmixer_bus.set_mute(0, True, mute, False)
         zynautoconnect.request_midi_connect(True)
         return True
 

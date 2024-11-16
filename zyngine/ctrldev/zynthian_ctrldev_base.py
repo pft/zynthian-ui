@@ -210,7 +210,7 @@ class zynthian_ctrldev_zynmixer(zynthian_ctrldev_base):
         zynsigman.register_queued(
             zynsigman.S_CHAIN_MAN, self.chain_manager.SS_MOVE_CHAIN, self.refresh)
         zynsigman.register_queued(
-            zynsigman.S_AUDIO_MIXER, self.zynmixer.SS_ZCTRL_SET_VALUE, self.update_mixer_strip)
+            zynsigman.S_AUDIO_MIXER, self.zynmixer.SS_ZYNMIXER_SET_VALUE, self.update_mixer_strip)
 
     def end(self):
         zynsigman.unregister(
@@ -218,7 +218,7 @@ class zynthian_ctrldev_zynmixer(zynthian_ctrldev_base):
         zynsigman.unregister(zynsigman.S_CHAIN_MAN,
                              self.chain_manager.SS_MOVE_CHAIN, self.refresh)
         zynsigman.unregister(
-            zynsigman.S_AUDIO_MIXER, self.zynmixer.SS_ZCTRL_SET_VALUE, self.update_mixer_strip)
+            zynsigman.S_AUDIO_MIXER, self.zynmixer.SS_ZYNMIXER_SET_VALUE, self.update_mixer_strip)
         self.light_off()
 
     def update_mixer_strip(self, chan, mixbus, symbol, value):

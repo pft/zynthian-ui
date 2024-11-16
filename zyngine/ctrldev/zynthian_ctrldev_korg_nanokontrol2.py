@@ -30,6 +30,7 @@ from time import sleep
 from zyncoder.zyncore import lib_zyncore
 from zyngine.zynthian_signal_manager import zynsigman
 from zyngine.ctrldev.zynthian_ctrldev_base import zynthian_ctrldev_zynmixer
+from zyngine.zynthian_audio_recorder import zynthian_audio_recorder
 
 # --------------------------------------------------------------------------
 # Korg nanoKontrol-2 Integration
@@ -140,7 +141,7 @@ class zynthian_ctrldev_korg_nanokontrol2(zynthian_ctrldev_zynmixer):
         zynsigman.register_queued(
             zynsigman.S_AUDIO_PLAYER, self.state_manager.SS_AUDIO_PLAYER_STATE, self.refresh_audio_transport)
         zynsigman.register_queued(
-            zynsigman.S_AUDIO_RECORDER, self.state_manager.SS_AUDIO_RECORDER_STATE, self.refresh_audio_transport)
+            zynsigman.S_AUDIO_RECORDER, zynthian_audio_recorder.SS_AUDIO_RECORDER_STATE, self.refresh_audio_transport)
         zynsigman.register_queued(
             zynsigman.S_STATE_MAN, self.state_manager.SS_MIDI_PLAYER_STATE, self.refresh_midi_transport)
         zynsigman.register_queued(
@@ -153,7 +154,7 @@ class zynthian_ctrldev_korg_nanokontrol2(zynthian_ctrldev_zynmixer):
         zynsigman.unregister(zynsigman.S_AUDIO_PLAYER,
                              self.state_manager.SS_AUDIO_PLAYER_STATE, self.refresh_audio_transport)
         zynsigman.unregister(zynsigman.S_AUDIO_RECORDER,
-                             self.state_manager.SS_AUDIO_RECORDER_STATE, self.refresh_audio_transport)
+                             zynthian_audio_recorder.SS_AUDIO_RECORDER_STATE, self.refresh_audio_transport)
         zynsigman.unregister(
             zynsigman.S_STATE_MAN, self.state_manager.SS_MIDI_PLAYER_STATE, self.refresh_midi_transport)
         zynsigman.unregister(

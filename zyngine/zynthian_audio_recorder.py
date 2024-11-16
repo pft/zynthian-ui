@@ -76,20 +76,17 @@ class zynthian_audio_recorder:
             index += 1
         return "{}/{}.{:03d}.wav".format(path, filename, index)
 
-    def arm(self, channel, mixbus, arm):
-        if mixbus:
-            src = f"zynmixer_buses:output_{channel:02d}"
-        else:
-            src = f"zynmixer_chans:output_{channel:02d}"
+    def arm(self, processor, arm):
+        src = f"{processor.jackname}:output_{processor.mixer_chan:02d}"
         if arm:
             self.armed.add(src)
             zynsigman.send(zynsigman.S_AUDIO_RECORDER,
-                self.SS_AUDIO_RECORDER_ARM, chan=channel, mixbus=mixbus, value=True)
+                self.SS_AUDIO_RECORDER_ARM, zynmixer=processor.zynmixer, channel=processor.mixer_chan, value=True)
         else:
             try:
                 self.armed.remove(src)
                 zynsigman.send(zynsigman.S_AUDIO_RECORDER,
-                            self.SS_AUDIO_RECORDER_ARM, chan=channel, mixbus=mixbus, value=False)
+                            self.SS_AUDIO_RECORDER_ARM, zynmixer=processor.zynmixer, channel=processor.mixer_chan, value=False)
             except:
                 logging.info("%s not armed", src)
 
@@ -98,9 +95,9 @@ class zynthian_audio_recorder:
 
     def is_armed(self, channel, mixbus):
         if mixbus:
-            src = f"zynmixer_buses:output_{channel:02d}"
+            src = f"zynmixer_bus:output_{channel:02d}"
         else:
-            src = f"zynmixer_chans:output_{channel:02d}"
+            src = f"zynmixer_chan:output_{channel:02d}"
         return src in self.armed
 
     def start_recording(self, processor=None):
@@ -118,9 +115,9 @@ class zynthian_audio_recorder:
                 cmd.append(f"{port}b")
         else:
             cmd.append("--port")
-            cmd.append("zynmixer_buses:output_00a")
+            cmd.append("zynmixer_bus:output_00a")
             cmd.append("--port")
-            cmd.append("zynmixer_buses:output_00b")
+            cmd.append("zynmixer_bus:output_00b")
 
         self.filename = self.get_new_filename()
         cmd.append(self.filename)

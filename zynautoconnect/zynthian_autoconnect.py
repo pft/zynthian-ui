@@ -858,15 +858,15 @@ def audio_autoconnect():
 
     try:
         # Connect metronome to aux
-        required_routes[f"zynmixer_buses:input_00a"].add("zynseq:metronome")
-        required_routes[f"zynmixer_buses:input_00b"].add("zynseq:metronome")
+        required_routes[f"zynmixer_bus:input_00a"].add("zynseq:metronome")
+        required_routes[f"zynmixer_bus:input_00b"].add("zynseq:metronome")
 
         # Connect global audio player to aux
         if state_manager.audio_player and state_manager.audio_player.jackname:
             ports = jclient.get_ports(
                 state_manager.audio_player.jackname, is_output=True, is_audio=True)
-            required_routes[f"zynmixer_buses:input_00a"].add(ports[0].name)
-            required_routes[f"zynmixer_buses:input_00b"].add(ports[1].name)
+            required_routes[f"zynmixer_bus:input_00a"].add(ports[0].name)
+            required_routes[f"zynmixer_bus:input_00b"].add(ports[1].name)
     except Exception as e:
         logging.warning(e)
 
@@ -893,16 +893,16 @@ def audio_autoconnect():
         required_routes[hp_ports[1].name] = required_routes[hw_audio_dst_ports[1].name]
 
     # Enable zynmixer internal normalised routes and remove corresponding jack graph connections
-    if "zynmixer_buses:input_00a" in required_routes and "zynmixer_buses:input_00b" in required_routes:
-        for chan in range(state_manager.zynmixer.MAX_NUM_CHANNELS):
-            bus_route_a = f"zynmixer_buses:output_{chan:02d}a"
-            bus_route_b = f"zynmixer_buses:output_{chan:02d}b"
-            if bus_route_a in required_routes["zynmixer_buses:input_00a"] and bus_route_b in required_routes["zynmixer_buses:input_00b"]:
-                required_routes["zynmixer_buses:input_00a"].remove(bus_route_a)
-                required_routes["zynmixer_buses:input_00b"].remove(bus_route_b)
-                state_manager.zynmixer.normalise(chan, 1)
+    if "zynmixer_bus:input_00a" in required_routes and "zynmixer_bus:input_00b" in required_routes:
+        for chan in range(state_manager.zynmixer_bus.MAX_NUM_CHANNELS):
+            bus_route_a = f"zynmixer_bus:output_{chan:02d}a"
+            bus_route_b = f"zynmixer_bus:output_{chan:02d}b"
+            if bus_route_a in required_routes["zynmixer_bus:input_00a"] and bus_route_b in required_routes["zynmixer_bus:input_00b"]:
+                required_routes["zynmixer_bus:input_00a"].remove(bus_route_a)
+                required_routes["zynmixer_bus:input_00b"].remove(bus_route_b)
+                state_manager.zynmixer_bus.normalise(chan, 1)
             else:
-                state_manager.zynmixer.normalise(chan, 0)
+                state_manager.zynmixer_bus.normalise(chan, 0)
 
     # Connect and disconnect routes
     for dst, sources in required_routes.items():
@@ -946,9 +946,9 @@ def audio_connect_ffmpeg(timeout=2.0):
         try:
             # TODO: Do we want post fader, post effects feed?
             jclient.connect(
-                f"zynmixer_buses:input_00a", "ffmpeg:input_1")
+                f"zynmixer_bus:input_00a", "ffmpeg:input_1")
             jclient.connect(
-                f"zynmixer_buses:input_00b", "ffmpeg:input_2")
+                f"zynmixer_bus:input_00b", "ffmpeg:input_2")
             return
         except:
             sleep(0.1)

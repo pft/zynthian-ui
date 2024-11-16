@@ -303,7 +303,7 @@ class zynthian_chain:
                     elif self.mixbus:
                         for am_slot in self.audio_slots:
                             if am_slot[0].eng_code == "AM":
-                                sources = [f"zynmixer_chans:send_{am_slot[0].mixer_chan:02d}"]
+                                sources = [f"zynmixer_chan:send_{am_slot[0].mixer_chan:02d}"]
                                 break
                     elif self.audio_thru:
                         sources = self.get_input_pairs()

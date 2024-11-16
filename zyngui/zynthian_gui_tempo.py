@@ -37,6 +37,7 @@ from zyngui import zynthian_gui_config
 from zyngui.zynthian_gui_base import zynthian_gui_base
 from zyngui.zynthian_gui_selector import zynthian_gui_controller
 from zyngine.zynthian_signal_manager import zynsigman
+from zyngine.zynthian_audio_recorder import zynthian_audio_recorder
 
 # ------------------------------------------------------------------------------
 # Zynthian Tempo GUI Class
@@ -169,7 +170,7 @@ class zynthian_gui_tempo(zynthian_gui_base):
             zynsigman.register(
                 zynsigman.S_AUDIO_PLAYER, self.zyngui.state_manager.SS_AUDIO_PLAYER_STATE, self.cb_status_audio_player)
             zynsigman.register(zynsigman.S_AUDIO_RECORDER,
-                               self.zyngui.state_manager.SS_AUDIO_RECORDER_STATE, self.cb_status_audio_recorder)
+                               zynthian_audio_recorder.SS_AUDIO_RECORDER_STATE, self.cb_status_audio_recorder)
             zynsigman.register(
                 zynsigman.S_STATE_MAN, self.zyngui.state_manager.SS_MIDI_PLAYER_STATE, self.cb_status_midi_player)
             zynsigman.register(
@@ -186,7 +187,7 @@ class zynthian_gui_tempo(zynthian_gui_base):
                 zynsigman.unregister(
                     zynsigman.S_AUDIO_PLAYER, self.zyngui.state_manager.SS_AUDIO_PLAYER_STATE, self.cb_status_audio_player)
                 zynsigman.unregister(
-                    zynsigman.S_AUDIO_RECORDER, self.zyngui.state_manager.SS_AUDIO_RECORDER_STATE, self.cb_status_audio_recorder)
+                    zynsigman.S_AUDIO_RECORDER, zynthian_audio_recorder.SS_AUDIO_RECORDER_STATE, self.cb_status_audio_recorder)
                 zynsigman.unregister(
                     zynsigman.S_STATE_MAN, self.zyngui.state_manager.SS_MIDI_PLAYER_STATE, self.cb_status_midi_player)
                 zynsigman.unregister(
@@ -255,7 +256,7 @@ class zynthian_gui_tempo(zynthian_gui_base):
         self.set_button_status(
             0, (self.zyngui.state_manager.status_audio_player))
 
-    def cb_status_audio_recorder(self, chan=None, state=None):
+    def cb_status_audio_recorder(self, state=None):
         self.set_button_status(
             1, self.zyngui.state_manager.audio_recorder.status)
 

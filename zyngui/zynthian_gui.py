@@ -401,7 +401,16 @@ class zynthian_gui:
             if part2 in ("HEARTBEAT", "SETUP"):
                 if src.hostname not in self.osc_clients:
                     try:
-                        if self.state_manager.zynmixer.add_osc_client(src.hostname) < 0:
+                        if self.self.zyngui.state_manager.zynmixer_chan.add_osc_client(src.hostname) < 0:
+                            logging.warning(
+                                "Failed to add OSC client registration {}".format(src.hostname))
+                            return
+                    except:
+                        logging.warning(
+                            "Error trying to add OSC client registration {}".format(src.hostname))
+                        return
+                    try:
+                        if self.self.zyngui.state_manager.zynmixer_bus.add_osc_client(src.hostname) < 0:
                             logging.warning(
                                 "Failed to add OSC client registration {}".format(src.hostname))
                             return
@@ -410,31 +419,36 @@ class zynthian_gui:
                             "Error trying to add OSC client registration {}".format(src.hostname))
                         return
                 self.osc_clients[src.hostname] = monotonic()
-                self.state_manager.zynmixer.enable_dpm(
-                    0, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 1, False, True)
-                self.state_manager.zynmixer.enable_dpm(
-                    1, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 1, True, True)
+                self.state_manager.zynmixer_chan.enable_dpm(
+                    0, self.state_manager.zynmixer_chan.MAX_NUM_CHANNELS - 1, True)
+                self.state_manager.zynmixer_bus.enable_dpm(
+                    1, self.state_manager.zynmixer_bus.MAX_NUM_CHANNELS - 1, True)
             else:
-                if part2[:6] == "VOLUME":
-                    self.state_manager.zynmixer.set_level(
+                mixer, param = part2.split("/")
+                if mixer == "bus":
+                    zynmixer = self.state_manager.zynmixer_bus
+                else:
+                    zynmixer = self.state_manager.zynmixer_chan
+                if param[:6] == "VOLUME":
+                    zynmixer.set_level(
                         int(part2[6:]), float(args[0]))
-                if part2[:5] == "FADER":
-                    self.state_manager.zynmixer.set_level(
+                if param[:5] == "FADER":
+                    zynmixer.set_level(
                         int(part2[5:]), float(args[0]))
-                if part2[:5] == "LEVEL":
-                    self.state_manager.zynmixer.set_level(
+                if param[:5] == "LEVEL":
+                    zynmixer.set_level(
                         int(part2[5:]), float(args[0]))
-                elif part2[:7] == "BALANCE":
-                    self.state_manager.zynmixer.set_balance(
+                elif param[:7] == "BALANCE":
+                    zynmixer.set_balance(
                         int(part2[7:]), float(args[0]))
-                elif part2[:4] == "MUTE":
-                    self.state_manager.zynmixer.set_mute(
+                elif param[:4] == "MUTE":
+                    zynmixer.set_mute(
                         int(part2[4:]), int(args[0]))
-                elif part2[:4] == "SOLO":
-                    self.state_manager.zynmixer.set_solo(
+                elif param[:4] == "SOLO":
+                    zynmixer.set_solo(
                         int(part2[4:]), int(args[0]))
-                elif part2[:4] == "MONO":
-                    self.state_manager.zynmixer.set_mono(
+                elif param[:4] == "MONO":
+                    zynmixer.set_mono(
                         int(part2[4:]), int(args[0]))
         else:
             logging.warning(f"Not supported OSC call '{path}'")
@@ -2612,10 +2626,10 @@ class zynthian_gui:
                         pass
 
             if not self.osc_clients and self.current_screen != "audio_mixer":
-                self.state_manager.zynmixer.enable_dpm(
-                    0, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 1, False, False)
-                self.state_manager.zynmixer.enable_dpm(
-                    1, self.state_manager.zynmixer.MAX_NUM_CHANNELS - 1, True, False)
+                self.state_manager.zynmixer_chan.enable_dpm(
+                    0, self.state_manager.zynmixer_chan.MAX_NUM_CHANNELS - 1, False)
+                self.state_manager.zynmixer_bus.enable_dpm(
+                    0, self.state_manager.zynmixer_bus.MAX_NUM_CHANNELS - 1, False)
 
             # Poll
             zynthian_gui_config.top.after(

@@ -46,13 +46,13 @@ from zynlibs.zynseq import zynseq
 # Python wrapper for zynsmf (ensures initialised and wraps load() function)
 from zynlibs.zynsmf import zynsmf
 from zynlibs.zynsmf.zynsmf import libsmf  # Direct access to shared library
+from zynlibs.zynmixer import zynmixer
 
 from zyngine.zynthian_chain_manager import *
 from zyngine.zynthian_processor import zynthian_processor
 from zyngine.zynthian_audio_recorder import zynthian_audio_recorder
 from zyngine.zynthian_signal_manager import zynsigman
 from zyngine import zynthian_legacy_snapshot
-from zyngine import zynthian_engine_audio_mixer
 from zyngine import zynthian_midi_filter
 
 from zyngui import zynthian_gui_config
@@ -62,7 +62,7 @@ from zyngine.zynthian_ctrldev_manager import zynthian_ctrldev_manager
 # Zynthian State Manager Class
 # ----------------------------------------------------------------------------
 
-SNAPSHOT_SCHEMA_VERSION = 1
+SNAPSHOT_SCHEMA_VERSION = 2
 capture_dir_sdc = os.environ.get(
     'ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/capture"
 ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
@@ -80,9 +80,6 @@ class zynthian_state_manager:
     # Subsignals from other modules. Just to simplify access.
     # From S_AUDIO_PLAYER
     SS_AUDIO_PLAYER_STATE = 1
-    # From S_AUDIO_RECORDER
-    SS_AUDIO_RECORDER_STATE = 1
-    SS_AUDIO_RECORDER_ARM = 2
 
     def __init__(self):
         """ Create an instance of a state manager
@@ -147,6 +144,8 @@ class zynthian_state_manager:
         self.hwmon_thermal_file = None
         self.hwmon_undervolt_file = None
 
+        self.zynmixer_chan = zynmixer.ZynMixer()
+        self.zynmixer_bus = zynmixer.ZynMixer(True)
         self.chain_manager = zynthian_chain_manager(self)
         self.reset_zs3()
 
@@ -228,13 +227,13 @@ class zynthian_state_manager:
         # Start VNC as configured
         self.default_vncserver()
 
+        self.chain_manager.add_chain(0)
+        self.chain_manager.add_processor(0, "AM", eng_config={"mixbus":True})
         zynautoconnect.start(self)
         self.jack_period = self.get_jackd_blocksize() / self.get_jackd_samplerate()
         self.ctrldev_manager = zynthian_ctrldev_manager(self)
         self.reload_midi_config()
         self.create_audio_player()
-        self.chain_manager.add_chain(0)
-        self.zynmixer = self.chain_manager.add_processor(0, "AM", eng_config={"mixbus":True}).engine
         self.exit_flag = False
         self.slow_thread = Thread(target=self.slow_thread_task)
         self.slow_thread.name = "Status Manager Slow"
@@ -305,7 +304,7 @@ class zynthian_state_manager:
         sequences : True for cleaning zynseq state (sequences)
         """
 
-        self.zynmixer.set_mute(0, True, 1)
+        self.zynmixer_bus.set_mute(0, 1)
         # self.zynseq.transport_stop("ALL")
         self.zynseq.libseq.stop()
         if zynseq:
@@ -314,12 +313,13 @@ class zynthian_state_manager:
             zynautoconnect.pause()
             self.chain_manager.remove_all_chains(True)
             self.reset_zs3()
-            self.zynmixer.reset()
+            self.zynmixer_chan.reset()
+            self.zynmixer_bus.reset()
             self.reload_midi_config()
             zynautoconnect.request_midi_connect(True)
             zynautoconnect.request_audio_connect(True)
             zynautoconnect.resume()
-        self.zynmixer.set_mute(0, True, 0)
+        self.zynmixer_bus.set_mute(0, 0)
 
     def clean_all(self):
         """Remove ALL Chains & Sequences."""
@@ -1088,14 +1088,16 @@ class zynthian_state_manager:
             self.end_busy("load snapshot")
             return None
 
-        mute = self.zynmixer.get_mute(0, True)
+        mute = self.zynmixer_bus.get_mute(0)
         try:
             snapshot = JSONDecoder().decode(json)
             state = self.fix_snapshot(snapshot)
+            if state is None:
+                return
 
             if load_chains:
                 # Mute output to avoid unwanted noises
-                self.zynmixer.set_mute(0, True, True)
+                self.zynmixer_bus.set_mute(0, True)
 
                 zynautoconnect.pause()
                 if "chains" in state:
@@ -1220,7 +1222,7 @@ class zynthian_state_manager:
         zynautoconnect.request_audio_connect(True)
 
         # Restore mute state
-        self.zynmixer.set_mute(0, True, mute)
+        self.zynmixer_bus.set_mute(0, mute)
 
         # Signal snapshot loading
         zynsigman.send_queued(zynsigman.S_STATE_MAN, self.SS_LOAD_SNAPSHOT)
@@ -1267,9 +1269,13 @@ class zynthian_state_manager:
             # logging.debug(f"Fixed Snapshot: {state}")
         else:
             state = snapshot
-            if state["schema_version"] < SNAPSHOT_SCHEMA_VERSION:
-                # self.set_busy_details("nothing to fix yet")
-                pass
+            if state["schema_version"] > SNAPSHOT_SCHEMA_VERSION:
+                logging.warning("Cannot load newer snapshot version")
+                return None
+            for version in range(state["schema_version"], SNAPSHOT_SCHEMA_VERSION):
+                match(version):
+                    case 1:
+                        pass
         return state
 
     def backup_snapshot(self, path):

@@ -37,6 +37,7 @@ from zynlibs.zynseq import zynseq
 from zyncoder.zyncore import lib_zyncore
 from zyngine.zynthian_signal_manager import zynsigman
 from zyngine.zynthian_engine_audioplayer import zynthian_engine_audioplayer
+from zyngine.zynthian_audio_recorder import zynthian_audio_recorder
 
 from .zynthian_ctrldev_base import (
     zynthian_ctrldev_zynmixer, zynthian_ctrldev_zynpad
@@ -204,7 +205,7 @@ class zynthian_ctrldev_akai_apc_key25_mk2(zynthian_ctrldev_zynmixer, zynthian_ct
                     self._on_media_change_state(state, f"audio-{handle}", "player")),
 
             (zynsigman.S_AUDIO_RECORDER,
-                state_manager.audio_recorder.SS_AUDIO_RECORDER_STATE,
+                zynthian_audio_recorder.SS_AUDIO_RECORDER_STATE,
                 partial(self._on_media_change_state, media="audio", kind="recorder")),
 
             (zynsigman.S_STATE_MAN,
