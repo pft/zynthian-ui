@@ -109,7 +109,10 @@ class zynthian_chain:
         self.free_zmop()
         self.midi_out = []
 
-        self.current_processor = None
+        try:
+            self.current_processor = self.audio_slots[0][0]
+        except:
+            self.current_processor = None
         self.remove_all_processors()
 
     def get_slots_by_type(self, type):
@@ -614,6 +617,9 @@ class zynthian_chain:
         processor : processor object to remove
         Returns : True on success
         """
+
+        if self.chain_id == 0 and processor.eng_code == "AM":
+            return False
 
         slot = self.get_slot(processor)
         if slot is None:

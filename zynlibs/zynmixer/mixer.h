@@ -153,6 +153,20 @@ uint8_t getPhase(uint8_t channel);
  */
 void togglePhase(uint8_t channel);
 
+/** @brief  Set channel send mode
+ *   @param  channel Index of channel
+ *   @param  send Index of send
+ *   @param  mode (0: post-fader, 1: pre-fader)
+ */
+void setSendMode(uint8_t channel, uint8_t send, uint8_t mode);
+
+/** @brief  Get channel send mode
+ *   @param  channel Index of channel
+ *   @param  send Index of send
+ *   @retval uint8_t Channel send mode (0: pre-fader, 1: post-fader, 2: post-pan)
+ */
+uint8_t getSendMode(uint8_t channel, uint8_t send);
+
 /** @brief  Set channel fx send level
  *   @param  channel Index of channel
  *   @param  send Index of fx send

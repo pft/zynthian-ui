@@ -246,7 +246,7 @@ class zynthian_gui_mixer_strip():
         state = [dpm_a, dpm_b, hold_a, hold_b, mono]
         """
 
-        if self.hidden or self.mixer_proc.mixer_chan is None:
+        if self.hidden:
             return
         self.dpm_a.refresh(state[0], state[2], state[4])
         self.dpm_b.refresh(state[1], state[3], state[4])
@@ -454,6 +454,7 @@ class zynthian_gui_mixer_strip():
             for slot in self.chain.audio_slots:
                 if slot[0].eng_code == "AM":
                     self.mixer_proc = slot[0]
+                    break
             self.show()
 
     def set_volume(self, value):

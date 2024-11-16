@@ -83,13 +83,17 @@ class ZynMixer():
         self.lib_zynmixer.getPhase.argtypes = [ctypes.c_uint8]
         self.lib_zynmixer.getPhase.restype = ctypes.c_uint8
 
+        self.lib_zynmixer.setSendMode.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getSendMode.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        self.lib_zynmixer.getSendMode.restype = ctypes.c_uint8
+
         self.lib_zynmixer.addSend.restype = ctypes.c_int
 
         self.lib_zynmixer.removeSend.argtypes = [ctypes.c_uint8]
         self.lib_zynmixer.removeSend.restype = ctypes.c_uint8
 
-        self.lib_zynmixer.setSend.argtypes = [ctypes.c_uint8, ctypes.c_float]
-        self.lib_zynmixer.getSend.argtypes = [ctypes.c_uint8]
+        self.lib_zynmixer.setSend.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_float]
+        self.lib_zynmixer.getSend.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib_zynmixer.getSend.restype = ctypes.c_float
 
         self.lib_zynmixer.setNormalise.argtypes = [
@@ -379,6 +383,47 @@ class ZynMixer():
             return
         self.lib_zynmixer.togglePhase(channel)
 
+    def set_send_mode(self, channel, send, mode):
+        """
+        Sets the effect send mode of a mixer strip
+
+        Parameters
+        ----------
+        channel : int
+            Index of the mixer strip
+        send : int
+            Index of the send
+        mode : int
+            0: post fader, 1: pre fader
+        """
+
+        if channel is None or 0 >= mode > 1:
+            return
+        self.lib_zynmixer.setSendMode(channel, send, mode)
+        zynsigman.send(zynsigman.S_AUDIO_MIXER, SS_ZYNMIXER_SET_VALUE,
+            zynmixer=self, channel=channel, symbol="send_mode", value=mode)
+
+    def get_send_mode(self, channel, send):
+        """
+        Gets the effect send mode of a mixer strip
+        
+        Parameters
+        ----------
+        channel : int
+            Index of the mixer strip
+        send : int
+            Index of the send
+        
+        Returns
+        -------
+        int
+            0: post fader, 1: pre fader
+        """
+
+        if channel is None:
+            return
+        return self.lib_zynmixer.getSendMode(channel)
+
     def set_solo(self, channel, solo):
         """
         Sets the solo state of a mixer strip
@@ -395,7 +440,7 @@ class ZynMixer():
 
         if channel is None:
             return
-        self.lib_zynmixer.setSolo(channel, solo)
+        self.lib_zynmixer.setSolo(channel, send, solo)
         zynsigman.send(zynsigman.S_AUDIO_MIXER, SS_ZYNMIXER_SET_VALUE,
             zynmixer=self, channel=channel, symbol="solo", value=solo)
 

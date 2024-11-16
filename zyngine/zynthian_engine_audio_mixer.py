@@ -61,8 +61,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1.0,
                     'value_default': 0.8,
                     'value': processor.zynmixer.get_level(processor.mixer_chan),
-                    'processor': processor,
-                    'graph_path': [processor.mixer_chan]
+                    'processor': processor
                 }),
                 'balance': zynthian_controller(self, 'balance', {
                     'is_integer': False,
@@ -70,15 +69,13 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1.0,
                     'value_default': 0.0,
                     'value': processor.zynmixer.get_balance(processor.mixer_chan),
-                    'processor': processor,
-                    'graph_path': [processor.mixer_chan]
+                    'processor': processor
                 }),
                 'mute': zynthian_controller(self, 'mute', {
                     'is_toggle': True,
                     'value_max': 1,
                     'value_default': 0,
                     'value': processor.zynmixer.get_mute(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -87,7 +84,6 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1,
                     'value_default': 0,
                     'value': processor.zynmixer.get_solo(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -96,7 +92,6 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1,
                     'value_default': 0,
                     'value': processor.zynmixer.get_mono(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -105,7 +100,6 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1,
                     'value_default': 0,
                     'value': processor.zynmixer.get_ms(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan],
                     'labels': ['off', 'on'],
                     'processor': processor,
                     'name': "M+S"
@@ -115,7 +109,6 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1,
                     'value_default': 0,
                     'value': processor.zynmixer.get_phase(processor.mixer_chan),
-                    'graph_path': [processor.mixer_chan],
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -124,7 +117,6 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'value_max': 1,
                     'value_default': 0,
                     'value': 0,
-                    'graph_path': [processor.mixer_chan],
                     'processor': processor,
                     'labels': ['off', 'on']
                 })
@@ -136,24 +128,36 @@ class zynthian_engine_audio_mixer(zynthian_engine):
         for processor in self.processors:
             if processor.zynmixer == self.state_manager.zynmixer_bus:
                 continue
-            send = 1
+            send = 0
             while True:
-                symbol = f"send {send}"
-                if send <= send_count:
+                symbol = f"send_{send}"
+                mode_symbol = f"send_{send}_mode"
+                if send < send_count:
                     # Check that processor has send control
                     if symbol not in processor.controllers_dict:
                         processor.controllers_dict[symbol] = zynthian_controller(self, symbol, {
-                            'name': f'send {send} level',
+                            'name': f'send {send + 1} level',
                             'value_max': 1.0,
                             'value_default': 0.0,
                             'value': processor.zynmixer.get_send(processor.mixer_chan, send),
-                            'graph_path': [processor.mixer_chan, send]
+                            'processor': processor,
+                            'graph_path': ["send", send]
                         })
-                        processor.ctrl_screens_dict[f"send {send}"] = [processor.controllers_dict[symbol]]
+                        processor.controllers_dict[mode_symbol] = zynthian_controller(self, mode_symbol, {
+                            'name': f'send {send + 1} mode',
+                            'value_max': 1,
+                            'value_default': 0,
+                            'value': processor.zynmixer.get_send(processor.mixer_chan, send),
+                            'labels': ['post fader', 'pre fader'],
+                            'processor': processor,
+                            'graph_path': ["send_mode", send]
+                        })
+                        processor.ctrl_screens_dict[f"send {send}"] = [processor.controllers_dict[symbol], processor.controllers_dict[f"{symbol}_mode"]]
                 else:
                     # Check that processor does not have send control
                     try:
                         del processor.controllers_dict[symbol]
+                        del processor.controllers_dict[mode_symbol]
                         del processor.ctrl_screens_dict[f"send {send}"]
                     except:
                         break
@@ -200,7 +204,8 @@ class zynthian_engine_audio_mixer(zynthian_engine):
     def send_controller_value(self, zctrl):
         try:
             if zctrl.symbol.startswith("send"):
-                zctrl.processor.zynmixer.set_send(zctrl.processor.mixer_chan, zctrl.value)
+                getattr(zctrl.processor.zynmixer, f'set_{zctrl.graph_path[0]}')(
+                    zctrl.processor.mixer_chan, zctrl.graph_path[1], zctrl.value)
             elif zctrl.symbol == "record":
                 #TODO: Use jackname to arm
                 self.state_manager.audio_recorder.arm(zctrl.processor, zctrl.value)

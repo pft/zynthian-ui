@@ -75,6 +75,7 @@ struct channel_strip {
     uint8_t mono;          // 1 if mono
     uint8_t ms;            // 1 if MS decoding
     uint8_t phase;         // 1 if channel B phase reversed
+    uint8_t sendMode[MAX_CHANNELS]; // 0: post-fader send, 1: pre-fader send
     uint8_t normalise;     // 1 if channel normalised to main output
     uint8_t inRouted;      // 1 if source routed to channel
     uint8_t outRouted;     // 1 if output routed
@@ -174,7 +175,7 @@ void* eventThreadFn(void* param) {
 static int onJackProcess(jack_nframes_t frames, void* args) {
     jack_default_audio_sample_t *pInA, *pInB, *pOutA, *pOutB, *pChanOutA, *pChanOutB, *pMainOutA, *pMainOutB;
     unsigned int frame;
-    float curLevelA, curLevelB, reqLevelA, reqLevelB, fDeltaA, fDeltaB, fSampleA, fSampleB, fSampleM, fSendA[MAX_CHANNELS], fSendB[MAX_CHANNELS];
+    float curLevelA, curLevelB, reqLevelA, reqLevelB, fDeltaA, fDeltaB, fSampleA, fSampleB, fSampleM, fpreFaderSampleA, fpreFaderSampleB;
 
     pthread_mutex_lock(&mutex);
 
@@ -285,6 +286,8 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
                 }
 
                 // Apply level adjustment
+                fpreFaderSampleA = fSampleA;
+                fpreFaderSampleB = fSampleB;
                 fSampleA *= curLevelA;
                 fSampleB *= curLevelB;
 
@@ -293,6 +296,10 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
                     fSampleA = 1.0;
                 if (isinf(fSampleB))
                     fSampleB = 1.0;
+                if (isinf(fpreFaderSampleA))
+                    fpreFaderSampleA = 1.0;
+                if (isinf(fpreFaderSampleB))
+                    fpreFaderSampleB = 1.0;
 
                 // Write sample to output buffer
                 if (pChanOutA) {
@@ -307,10 +314,15 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
                 }
 #else
                 // Add fx send output frames only for input channels
-                for (uint8_t send = 1; send < MAX_CHANNELS; ++send) {
+                for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
                     if (g_fxSends[send]) {
-                        g_fxSends[send]->bufferA[frame] += fSampleA * strip->send[send];
-                        g_fxSends[send]->bufferB[frame] += fSampleB * strip->send[send];
+                        if (strip->sendMode[send] == 0) {
+                            g_fxSends[send]->bufferA[frame] += fSampleA * strip->send[send] * g_fxSends[send]->level;
+                            g_fxSends[send]->bufferB[frame] += fSampleB * strip->send[send] * g_fxSends[send]->level;
+                        } else if (strip->sendMode[send] == 1) {
+                            g_fxSends[send]->bufferA[frame] += fpreFaderSampleA * strip->send[send] * g_fxSends[send]->level;
+                            g_fxSends[send]->bufferB[frame] += fpreFaderSampleB * strip->send[send] * g_fxSends[send]->level;
+                        }
                         if(isinf(g_fxSends[send]->bufferA[frame]))
                             g_fxSends[send]->bufferA[frame] = 1.0;
                         if(isinf(g_fxSends[send]->bufferB[frame]))
@@ -594,6 +606,20 @@ uint8_t getPhase(uint8_t channel) {
     return g_channelStrips[channel]->phase;
 }
 
+void setSendMode(uint8_t channel, uint8_t send, uint8_t mode) {
+    if (channel >= MAX_CHANNELS || send >= MAX_CHANNELS || g_channelStrips[channel] == NULL || mode > 1)
+        return;
+    g_channelStrips[channel]->sendMode[send] = mode;
+    sprintf(g_oscpath, "/mixer/channel/%d/sendmode_%d", channel, send);
+    sendOscInt(g_oscpath, mode);
+}
+
+uint8_t getSendMode(uint8_t channel, uint8_t send) {
+    if (channel >= MAX_CHANNELS || send >= MAX_CHANNELS || g_channelStrips[channel] == NULL)
+        return 0;
+    return g_channelStrips[channel]->sendMode[send];
+}
+
 void togglePhase(uint8_t channel) {
     if (channel >= MAX_CHANNELS || g_channelStrips[channel] == NULL)
         return;
@@ -642,23 +668,9 @@ uint8_t getNormalise(uint8_t channel) {
 void setSolo(uint8_t channel, uint8_t solo) {
     if (channel >= MAX_CHANNELS || g_channelStrips[channel] == NULL)
         return;
-/*
-    if (!channel) {
-        // Setting main mixbus solo will disable all channel solos
-        for (uint8_t chan = 0; chan < MAX_CHANNELS; ++chan) {
-            if(g_channelStrips[chan]) {
-                g_channelStrips[chan]->solo = 0;
-                sprintf(g_oscpath, "/mixer/channel/%d/solo", chan);
-                sendOscInt(g_oscpath, 0);
-            }
-        }
-    } else {
-*/
     g_channelStrips[channel]->solo = solo;
     sprintf(g_oscpath, "/mixer/channel/%d/solo", channel);
     sendOscInt(g_oscpath, solo);
-//    }
-    // Set the global solo flag if any channel solo is enabled
     g_solo = 0;
     for (uint8_t chan = 0; chan < MAX_CHANNELS; ++chan) {
         if (g_channelStrips[chan] && g_channelStrips[chan]->solo) {
@@ -741,8 +753,10 @@ void reset(uint8_t channel) {
     setMono(channel, 0);
     setPhase(channel, 0);
     setSolo(channel, 0);
-    for (uint8_t send = 0; send < MAX_CHANNELS; ++send)
-        setSend(channel, send, 0);
+    for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
+        setSend(channel, send, 0.0);
+        setSendMode(channel, send, 0);
+    }
 }
 
 float getDpm(uint8_t channel, uint8_t leg) {
@@ -821,8 +835,10 @@ int8_t addStrip() {
         g_channelStrips[chan]->inRouted   = 0;
         g_channelStrips[chan]->outRouted  = 0;
         g_channelStrips[chan]->enable_dpm = 0;
-        for (uint8_t send = 0; send < MAX_CHANNELS; ++send)
+        for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
             g_channelStrips[chan]->send[send] = 0.0;
+            g_channelStrips[chan]->sendMode[send] = 0;
+        }
         char name[11];
         sprintf(name, "input_%02da", chan);
         pthread_mutex_lock(&mutex);
@@ -932,10 +948,10 @@ int8_t addSend() {
 }
 
 uint8_t removeSend(uint8_t send) {
-    #ifdef MIXBUS
+#ifdef MIXBUS
     fprintf(stderr, "Effects sends not implemented in mixbus\n");
     return 1;
-    #else
+#else
     if (send >= g_sendCount)
         return 1;
     uint8_t sendCount = g_sendCount;
@@ -983,6 +999,14 @@ int addOscClient(const char* client) {
             setMute(chan, getMute(chan));
             setPhase(chan, getPhase(chan));
             setSolo(chan, getSolo(chan));
+#ifndef MIXBUS
+            for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
+                if (g_fxSends[send]) {
+                    setSend(chan, send, getSend(chan, send));
+                    setSendMode(chan, send, getSendMode(chan, send));
+                }
+            }
+#endif
             g_channelStrips[chan]->dpmAlast  = 100.0;
             g_channelStrips[chan]->dpmBlast  = 100.0;
             g_channelStrips[chan]->holdAlast = 100.0;

@@ -144,6 +144,7 @@ class zynthian_chain_manager:
             return cls.engine_info
 
         cls.engine_info = eng_info
+        cls.engine_info["AM"] = {"ID":"0", "NAME":"Mixer_Channel_Strip", "TITLE": "Mixer Channel Strip", "TYPE": "Audio Effect", "CAT": "Other", "ENABLED": False, "INDEX": 0, "URL": "", "UI": "", "DESCR": "Audio mixer channel strip", "QUALITY": 5, "COMPLEX": 5, "EDIT": 0}
         # Look for an engine class for each one
         for key, info in cls.engine_info.items():
             try:
@@ -346,9 +347,6 @@ class zynthian_chain_manager:
             if chain.is_audio():
                 #TODO: Mute chain whilst removing
                 pass
-
-            for processor in chain.get_processors():
-                self.remove_processor(chain_id, processor, False)
 
             chain.reset()
             if chain_id != 0:
