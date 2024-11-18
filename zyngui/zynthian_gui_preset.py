@@ -30,28 +30,30 @@ import logging
 # Zynthian specific modules
 from zyngui import zynthian_gui_config
 from zyngui.zynthian_gui_selector import zynthian_gui_selector
+from zyngui.zynthian_gui_save_preset import zynthian_gui_save_preset
 
 # -------------------------------------------------------------------------------
 # Zynthian Preset/Instrument Selection GUI Class
 # -------------------------------------------------------------------------------
 
 
-class zynthian_gui_preset(zynthian_gui_selector):
+class zynthian_gui_preset(zynthian_gui_selector, zynthian_gui_save_preset):
 
     def __init__(self):
+        self.processor = None
         super().__init__('Preset', True)
 
     def fill_list(self):
-        proc = self.zyngui.get_current_processor()
-        if not proc:
+        if not self.processor:
             logging.error("Can't fill preset list for None processor!")
             return
-        proc.load_preset_list()
-        self.list_data = proc.preset_list
+        self.processor.load_preset_list()
+        self.list_data = self.processor.preset_list
         super().fill_list()
 
     def build_view(self):
-        if self.zyngui.get_current_processor():
+        self.processor = self.zyngui.get_current_processor()
+        if self.processor:
             return super().build_view()
         else:
             return False
@@ -69,21 +71,29 @@ class zynthian_gui_preset(zynthian_gui_selector):
             self.zyngui.replace_screen("control")
 
     def show_preset_options(self):
+        options = {}
+        engine = self.processor.engine
         preset = copy.deepcopy(self.list_data[self.index])
         if preset[2][0] == "❤":
             preset[2] = preset[2][1:]
         preset_name = preset[2]
-        options = {}
-        proc = self.zyngui.get_current_processor()
-        if proc.engine.is_preset_fav(preset):
+        if self.processor.engine.is_preset_fav(preset):
             options["\u2612 Favourite"] = preset
         else:
             options["\u2610 Favourite"] = preset
-        if proc.engine.is_preset_user(preset):
-            if hasattr(proc.engine, "rename_preset"):
+        if engine.is_preset_user(preset):
+            if hasattr(engine, "rename_preset"):
                 options["Rename"] = preset
-            if hasattr(proc.engine, "delete_preset"):
+            if hasattr(engine, "delete_preset"):
                 options["Delete"] = preset
+        global_options = {}
+        if hasattr(engine, "save_preset"):
+            global_options["Save new preset"] = True
+        if self.processor.eng_code.startswith("JV/"):
+            global_options["Scan for new presets"] = True
+        if global_options:
+            options["Global"] = None
+            options.update(global_options)
         self.zyngui.screens['option'].config("Preset: {}".format(
             preset_name), options, self.preset_options_cb)
         self.zyngui.show_screen('option')
@@ -99,26 +109,28 @@ class zynthian_gui_preset(zynthian_gui_selector):
 
     def preset_options_cb(self, option, preset):
         if option.endswith("Favourite"):
-            proc = self.zyngui.get_current_processor()
-            proc.toggle_preset_fav(preset)
-            proc.load_preset_list()
+            self.processor.toggle_preset_fav(preset)
+            self.processor.load_preset_list()
             self.show_preset_options()
         elif option == "Rename":
             self.zyngui.show_keyboard(self.rename_preset, preset[2])
         elif option == "Delete":
             self.delete_preset(preset)
+        elif option == "Save new preset":
+            super().save_preset()
+        elif option == "Scan for new presets":
+            self.scan_presets()
 
     def rename_preset(self, new_name):
         preset = self.list_data[self.index]
         new_name = new_name.strip()
         if new_name != preset[2]:
-            proc = self.zyngui.get_current_processor()
             try:
                 # TODO: Confirm rename if overwriting existing preset or duplicate name
-                proc.engine.rename_preset(proc.bank_info, preset, new_name)
-                if preset[0] == proc.preset_info[0]:
+                self.processor.engine.rename_preset(self.processor.bank_info, preset, new_name)
+                if preset[0] == self.processor.preset_info[0]:
                     self.zyngui.state_manager.start_busy("set preset")
-                    proc.set_preset_by_id(preset[0])
+                    self.processor.set_preset_by_id(preset[0])
                     self.fill_list()
                     self.zyngui.state_manager.end_busy("set preset")
             except Exception as e:
@@ -130,14 +142,17 @@ class zynthian_gui_preset(zynthian_gui_selector):
 
     def delete_preset_confirmed(self, preset):
         try:
-            proc = self.zyngui.get_current_processor()
-            count = proc.engine.delete_preset(proc.bank_info, preset)
-            proc.remove_preset_fav(preset)
+            count = self.processor.engine.delete_preset(self.processor.bank_info, preset)
+            self.processor.remove_preset_fav(preset)
             self.fill_list()
             if count == 0:
                 self.zyngui.close_screen()
         except Exception as e:
             logging.error("Failed to delete preset => {}".format(e))
+
+    def scan_presets(self):
+        self.zyngui.chain_manager.reload_engine_preset_info(self.processor.eng_code)
+        self.zyngui.cuia_bank_preset(self.processor)
 
     # Function to handle *all* switch presses.
     # swi: Switch index [0=Layer, 1=Back, 2=Snapshot, 3=Select]
@@ -146,7 +161,7 @@ class zynthian_gui_preset(zynthian_gui_selector):
     def switch(self, swi, t='S'):
         if swi == 1:
             if t == 'S':
-                if len(self.zyngui.get_current_processor().get_bank_list()) > 1:
+                if len(self.processor.get_bank_list()) > 1:
                     self.zyngui.replace_screen('bank')
                     return True
         elif swi == 2:
@@ -161,7 +176,7 @@ class zynthian_gui_preset(zynthian_gui_selector):
 
     def cuia_toggle_play(self, params=None):
         try:
-            if self.zyngui.get_current_processor().engine.nickname == "AP":
+            if self.processor.engine.nickname == "AP":
                 self.click_listbox()
         except:
             pass
@@ -171,19 +186,18 @@ class zynthian_gui_preset(zynthian_gui_selector):
 
     def preselect_action(self):
         self.zyngui.state_manager.start_busy("preselect preset")
-        res = self.zyngui.get_current_processor().preload_preset(self.index)
+        res = self.processor.preload_preset(self.index)
         self.zyngui.state_manager.end_busy("preselect preset")
         return res
 
     def restore_preset(self):
-        return self.zyngui.get_current_processor().restore_preset()
+        return self.processor.restore_preset()
 
     def set_select_path(self):
-        proc = self.zyngui.get_current_processor()
-        if proc:
-            if proc.show_fav_presets:
-                self.select_path.set(proc.get_basepath() + " > Favorites")
+        if self.processor:
+            if self.processor.show_fav_presets:
+                self.select_path.set(self.processor.get_basepath() + " > Favorites")
             else:
-                self.select_path.set(proc.get_bankpath())
+                self.select_path.set(self.processor.get_bankpath())
 
 # ------------------------------------------------------------------------------

@@ -55,23 +55,19 @@ class zynthian_gui_audio_out(zynthian_gui_selector):
                         prefix = "∞ "
                     else:
                         prefix = ""
-                    port_names.append(
-                        (f"{prefix}{chain.get_name()}", chain_id))
+                    port_names.append((f"{prefix}{chain.get_name()}", chain_id))
                 # Add side-chain targets
                 for processor in chain.get_processors():
                     try:
                         for port_name in zynautoconnect.get_sidechain_portnames(processor.jackname):
-                            port_names.append(
-                                (f"↣ side {port_name}", port_name))
+                            port_names.append((f"↣ side {port_name}", port_name))
                     except:
                         pass
             for title, processor in port_names:
                 if processor in self.chain.audio_out:
-                    self.list_data.append(
-                        (processor, processor, "\u2612 " + title))
+                    self.list_data.append((processor, processor, "\u2612 " + title))
                 else:
-                    self.list_data.append(
-                        (processor, processor, "\u2610 " + title))
+                    self.list_data.append((processor, processor, "\u2610 " + title))
 
         if self.chain.is_audio():
             port_names = []
@@ -82,19 +78,15 @@ class zynthian_gui_audio_out(zynthian_gui_selector):
             for i in range(1, port_count + 1, 2):
                 if i < port_count:
                     port_names.append((f"Output {i}", f"system:playback_{i}$"))
-                    port_names.append(
-                        (f"Output {i + 1}", f"system:playback_{i + 1}$"))
-                    port_names.append(
-                        (f"Outputs {i}+{i + 1}", f"system:playback_[{i},{i + 1}]$"))
+                    port_names.append((f"Output {i + 1}", f"system:playback_{i + 1}$"))
+                    port_names.append((f"Outputs {i}+{i + 1}", f"system:playback_[{i},{i + 1}]$"))
                 else:
                     port_names.append((f"Output {i}", f"system:playback_{i}$"))
             for title, processor in port_names:
                 if processor in self.chain.audio_out:
-                    self.list_data.append(
-                        (processor, processor, "\u2612 " + title))
+                    self.list_data.append((processor, processor, "\u2612 " + title))
                 else:
-                    self.list_data.append(
-                        (processor, processor, "\u2610 " + title))
+                    self.list_data.append((processor, processor, "\u2610 " + title))
 
         super().fill_list()
 

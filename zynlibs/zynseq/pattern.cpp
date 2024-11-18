@@ -82,11 +82,12 @@ StepEvent* Pattern::addEvent(uint32_t position, uint8_t command, uint8_t value1,
 }
 
 StepEvent* Pattern::addEvent(StepEvent* pEvent) {
-    StepEvent* sev = addEvent(pEvent->getPosition(), pEvent->getCommand(), pEvent->getValue1start(), pEvent->getValue2start(), pEvent->getDuration());
+    StepEvent* sev = addEvent(pEvent->getPosition(), pEvent->getCommand(), pEvent->getValue1start(), pEvent->getValue2start(), pEvent->getDuration(), pEvent->getOffset());
     sev->setValue1end(pEvent->getValue1end());
     sev->setValue2end(pEvent->getValue2end());
     sev->setStutterCount(pEvent->getStutterCount());
     sev->setStutterDur(pEvent->getStutterDur());
+    sev->setPlayChance(pEvent->getPlayChance());
     return sev;
 }
 

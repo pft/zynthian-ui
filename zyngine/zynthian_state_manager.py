@@ -108,6 +108,7 @@ class zynthian_state_manager:
         self.snapshot_bank = None  # Name of snapshot bank (without path)
         self.snapshot_program = 0
         self.zs3 = {}  # Dictionary or zs3 configs indexed by "ch/pc"
+        self.last_zs3_id = None
 
         # Power saving
         self.power_save_mode = False
@@ -951,7 +952,8 @@ class zynthian_state_manager:
             'last_snapshot_fpath': self.last_snapshot_fpath,
             'midi_profile_state': self.get_midi_profile_state(),
             'chains': self.chain_manager.get_state(),
-            'zs3': self.zs3
+            'zs3': self.zs3,
+            'last_zs3_id': self.last_zs3_id
         }
 
         engine_states = {}
@@ -1108,15 +1110,15 @@ class zynthian_state_manager:
 
                     if merge:
                         # Remove elements that are not to be merged
-                        for key in ["last_snapshot_fpath", "midi_profile_state", "audio_recorder_armed", "zynseq_riff_b64", "alsa_mixer", "zyngui"]:
+                        for key in ["last_snapshot_fpath", "last_zs3_id", "midi_profile_state", "audio_recorder_armed", "zynseq_riff_b64", "alsa_mixer", "zyngui"]:
                             try:
                                 del state[key]
                             except:
                                 pass
                         # Need to reassign chains and processor ids
-                        chain_map = {} # Map of new chain id indexed by old id
-                        proc_map = {} # Map of new processor id indexed by old id
-                        mixer_map = {} # Map of new mixer chan idx indexed by old idx
+                        chain_map = {}  # Map of new chain id indexed by old id
+                        proc_map = {}   # Map of new processor id indexed by old id
+                        mixer_map = {}  # Map of new mixer chan idx indexed by old idx
                         # Don't import main chain
                         try:
                             del state["chains"]["0"]
@@ -1181,10 +1183,14 @@ class zynthian_state_manager:
                 self.chain_manager.stop_unused_engines()
                 zynautoconnect.resume()
 
+                if "last_zs3_id" in state:
+                    self.last_zs3_id = state["last_zs3_id"]
+                else:
+                    self.last_zs3_id = None
                 zs3 = self.sanitize_zs3_from_json(state["zs3"])
                 if not merge:
                     self.zs3 = zs3
-                self.load_zs3(zs3["zs3-0"])
+                self.load_zs3(zs3["zs3-0"], autoconnect=False)
                 try:
                     mute |= self.zs3["zs3-0"]["mixer"]["chan_16"]["mute"]
                 except:
@@ -1323,7 +1329,7 @@ class zynthian_state_manager:
 
         try:
             if zs3_id is None:
-                zs3_id = self.zs3['last_zs3']
+                zs3_id = self.last_zs3_id
             return self.zs3[zs3_id]["title"]
         except:
             return zs3_id
@@ -1342,7 +1348,7 @@ class zynthian_state_manager:
         except:
             tstate["restore"] = False
 
-    def load_zs3(self, zs3_id):
+    def load_zs3(self, zs3_id, autoconnect=True):
         """Restore a ZS3
 
         zs3_id : ID of ZS3 to restore or zs3 dict
@@ -1364,7 +1370,7 @@ class zynthian_state_manager:
         else:
             try:
                 zs3_state = zs3_id
-                zs3_id = self.zs3['last_zs3']
+                zs3_id = self.last_zs3_id
                 if zs3_id is None:
                     zs3_id = "zs3-0"
             except:
@@ -1394,29 +1400,23 @@ class zynthian_state_manager:
 
                 if "midi_chan" in chain_state:
                     if chain.midi_chan is not None and chain.midi_chan != chain_state['midi_chan']:
-                        self.chain_manager.set_midi_chan(
-                            chain_id, chain_state['midi_chan'])
+                        self.chain_manager.set_midi_chan(chain_id, chain_state['midi_chan'])
 
                 if chain.zmop_index is not None:
                     if "note_low" in chain_state:
-                        lib_zyncore.zmop_set_note_low(
-                            chain.zmop_index, chain_state["note_low"])
+                        lib_zyncore.zmop_set_note_low(chain.zmop_index, chain_state["note_low"])
                     else:
                         lib_zyncore.zmop_set_note_low(chain.zmop_index, 0)
                     if "note_high" in chain_state:
-                        lib_zyncore.zmop_set_note_high(
-                            chain.zmop_index, chain_state["note_high"])
+                        lib_zyncore.zmop_set_note_high(chain.zmop_index, chain_state["note_high"])
                     else:
                         lib_zyncore.zmop_set_note_high(chain.zmop_index, 127)
                     if "transpose_octave" in chain_state:
-                        lib_zyncore.zmop_set_transpose_octave(
-                            chain.zmop_index, chain_state["transpose_octave"])
+                        lib_zyncore.zmop_set_transpose_octave(chain.zmop_index, chain_state["transpose_octave"])
                     else:
-                        lib_zyncore.zmop_set_transpose_octave(
-                            chain.zmop_index, 0)
+                        lib_zyncore.zmop_set_transpose_octave(chain.zmop_index, 0)
                     if "transpose_semitone" in chain_state:
-                        lib_zyncore.zmop_set_transpose_semitone(
-                            chain.zmop_index, chain_state["transpose_semitone"])
+                        lib_zyncore.zmop_set_transpose_semitone(chain.zmop_index, chain_state["transpose_semitone"])
                     else:
                         lib_zyncore.zmop_set_transpose_semitone(
                             chain.zmop_index, 0)
@@ -1432,8 +1432,7 @@ class zynthian_state_manager:
                 if "audio_out" in chain_state:
                     for out in chain_state["audio_out"]:
                         try:
-                            chain.audio_out.append(
-                                f"{self.chain_manager.processors[out[0]].jackname}:{out[1]}")
+                            chain.audio_out.append(f"{self.chain_manager.processors[out[0]].jackname}:{out[1]}")
                         except:
                             chain.audio_out.append(out)
 
@@ -1444,8 +1443,7 @@ class zynthian_state_manager:
                     for cc, cfg in chain_state["midi_cc"].items():
                         for proc_id, symbol in cfg:
                             if proc_id in self.chain_manager.processors:
-                                restored_cc_mapping.append(
-                                    (proc_id, int(cc), symbol))
+                                restored_cc_mapping.append((proc_id, int(cc), symbol))
         if mute_pause:
             # Wait for soft mutes to apply before changing settings
             sleep(self.jack_period)
@@ -1455,26 +1453,21 @@ class zynthian_state_manager:
                 try:
                     processor = self.chain_manager.processors[int(proc_id)]
                     if processor.chain_id in restored_chains:
-                        self.set_busy_details(
-                            f"restoring {processor.get_basepath()} state")
+                        self.set_busy_details(f"restoring {processor.get_basepath()} state")
                         processor.set_state(proc_state)
                 except Exception as e:
-                    logging.error(
-                        f"Failed to restore processor {proc_id} state => {e}")
+                    logging.error(f"Failed to restore processor {proc_id} state => {e}")
 
         for cc_map in restored_cc_mapping:
             processor = self.chain_manager.processors[cc_map[0]]
             try:
                 zctrl = processor.controllers_dict[cc_map[2]]
-                self.chain_manager.add_midi_learn(
-                    processor.midi_chan, cc_map[1], zctrl)
+                self.chain_manager.add_midi_learn(processor.midi_chan, cc_map[1], zctrl)
             except:
-                logging.warning(
-                    f"Failed to restore MIDI learning {cc_map[1]} => {cc_map[2]}")
+                logging.warning(f"Failed to restore MIDI learning {cc_map[1]} => {cc_map[2]}")
 
         if "active_chain" in zs3_state:
-            self.chain_manager.set_active_chain_by_id(
-                zs3_state["active_chain"])
+            self.chain_manager.set_active_chain_by_id(zs3_state["active_chain"])
 
         if "midi_capture" in zs3_state:
             self.set_busy_details("restoring midi capture state")
@@ -1482,8 +1475,7 @@ class zynthian_state_manager:
 
         if "global" in zs3_state:
             if "midi_transpose" in zs3_state["global"]:
-                lib_zyncore.set_global_transpose(
-                    int(zs3_state["global"]["midi_transpose"]))
+                lib_zyncore.set_global_transpose(int(zs3_state["global"]["midi_transpose"]))
             if "zctrl_x" in zs3_state["global"]:
                 try:
                     processor = self.chain_manager.processors[zs3_state["global"]["zctrl_x"][0]]
@@ -1499,21 +1491,21 @@ class zynthian_state_manager:
             if "zynaptik" in zs3_state["global"]:
                 try:
                     zynaptik_config = zs3_state["global"]["zynaptik"]
-                    lib_zyncore.zynaptik_cvin_set_volts_octave(
-                        ctypes.c_float(zynaptik_config["cvin_volts_octave"]))
-                    lib_zyncore.zynaptik_cvin_set_note0(
-                        zynaptik_config["cvin_note0"])
-                    lib_zyncore.zynaptik_cvout_set_volts_octave(
-                        ctypes.c_float(zynaptik_config["cvout_volts_octave"]))
-                    lib_zyncore.zynaptik_cvout_set_note0(
-                        zynaptik_config["cvout_note0"])
+                    lib_zyncore.zynaptik_cvin_set_volts_octave(ctypes.c_float(zynaptik_config["cvin_volts_octave"]))
+                    lib_zyncore.zynaptik_cvin_set_note0(zynaptik_config["cvin_note0"])
+                    lib_zyncore.zynaptik_cvout_set_volts_octave(ctypes.c_float(zynaptik_config["cvout_volts_octave"]))
+                    lib_zyncore.zynaptik_cvout_set_note0(zynaptik_config["cvout_note0"])
                 except:
                     pass
 
         if zs3_id != 'zs3-0':
-            self.zs3['last_zs3'] = zs3_id
-            self.zs3['zs3-0'] = self.zs3[zs3_id].copy()
+            self.last_zs3_id = zs3_id
+            #self.zs3['zs3-0'] = self.zs3[zs3_id].copy()
         zynsigman.send(zynsigman.S_STATE_MAN, self.SS_LOAD_ZS3, zs3_id=zs3_id)
+
+        if autoconnect:
+            zynautoconnect.request_midi_connect(True)
+            zynautoconnect.request_audio_connect(True)
         return True
 
     def save_zs3(self, zs3_id=None, title=None):
@@ -1657,8 +1649,9 @@ class zynthian_state_manager:
             pass
 
         if zs3_id != 'zs3-0':
-            self.zs3['last_zs3'] = zs3_id
-            self.zs3['zs3-0'] = self.zs3[zs3_id].copy()
+            self.last_zs3_id = zs3_id
+            # Jofemodo: this has not sense from my POV
+            #self.zs3['zs3-0'] = self.zs3[zs3_id].copy()
         zynsigman.send(zynsigman.S_STATE_MAN, self.SS_SAVE_ZS3, zs3_id=zs3_id)
 
     def delete_zs3(self, zs3_id):
@@ -1668,8 +1661,8 @@ class zynthian_state_manager:
         """
         try:
             del (self.zs3[zs3_id])
-            if self.zs3['last_zs3'] == zs3_id:
-                self.zs3['last_zs3'] = None
+            if self.last_zs3_id == zs3_id:
+                self.last_zs3_id = None
 
         except:
             logging.info("Tried to remove non-existant ZS3")
@@ -1678,15 +1671,18 @@ class zynthian_state_manager:
         """Remove all ZS3"""
 
         # ZS3 list (subsnapshots)
-        self.zs3 = {'last_zs3': None}
-        # Last selected ZS3 subsnapshot
+        self.zs3 = {}
 
     def sanitize_zs3_from_json(self, zs3_state):
         """Fix chain & processor ID keys in ZS3 data decoded from JSON"""
 
+        # TODO: Temporal compatibility fix with older vangelis => To remove!!
+        if 'last_zs3' in zs3_state:
+            if self.last_zs3_id is None:
+                self.last_zs3_id = zs3_state['last_zs3']
+            del zs3_state['last_zs3']
+
         for zs3_key, state in zs3_state.items():
-            if zs3_key == 'last_zs3':
-                continue
             if 'chains' in state:
                 fixed_chains = {}
                 for chain_id, chain_state in state['chains'].items():
@@ -1709,16 +1705,12 @@ class zynthian_state_manager:
                         continue
                     fixed_processors[processor_id] = processor_state
                 state['processors'] = fixed_processors
-        if 'last_zs3' not in zs3_state:
-            self.zs3['last_zs3'] = None
         return zs3_state
 
     def purge_zs3(self):
         """Remove non-existant chains and processors from ZS3 state"""
 
         for key, state in self.zs3.items():
-            if key == 'last_zs3':
-                continue
             if state["active_chain"] not in self.chain_manager.chains:
                 state["active_chain"] = self.chain_manager.active_chain_id
             if "processors" in state:

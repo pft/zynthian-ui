@@ -580,7 +580,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
             self.zynseq.libseq.transpose(offset)
             self.save_pattern_snapshot(now=True, force=True)
             self.set_keymap_offset(self.keymap_offset + offset)
-            self.selected_cell[1] = self.selected_cell[1] + int(offset)
+            self.selected_cell[1] += int(offset)
             self.redraw_pending = 3
             self.select_cell()
 
@@ -823,8 +823,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
             if self.keymap_offset > 0:
                 self.set_keymap_offset(self.keymap_offset - 1)
                 if self.selected_cell[1] >= self.keymap_offset + self.view_rows:
-                    self.select_cell(
-                        self.selected_cell[0], self.keymap_offset + self.view_rows - 1)
+                    self.select_cell(self.selected_cell[0], self.keymap_offset + self.view_rows - 1)
 
     # Function to handle grid mouse down
     # event: Mouse event
@@ -888,20 +887,16 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
                 if not self.drag_duration and not self.drag_velocity and (event.y > self.grid_drag_start.y + self.row_height / 2 or event.y < self.grid_drag_start.y - self.row_height / 2):
                     self.drag_velocity = True
                 if self.drag_velocity:
-                    value = (self.grid_drag_start.y -
-                             event.y) / self.row_height
+                    value = (self.grid_drag_start.y - event.y) / self.row_height
                     if value:
-                        velocity = int(self.drag_start_velocity +
-                                       value * self.height / 100)
+                        velocity = int(self.drag_start_velocity + value * self.height / 100)
                         if 1 <= velocity <= 127:
                             self.set_velocity_indicator(velocity)
                             if sel_duration and velocity != sel_velocity:
-                                self.zynseq.libseq.setNoteVelocity(
-                                    step, note, velocity)
+                                self.zynseq.libseq.setNoteVelocity(step, note, velocity)
                                 self.draw_cell(step, row)
                 if self.drag_duration:
-                    duration = int(event.x / self.step_width) - \
-                        self.drag_start_step
+                    duration = int(event.x / self.step_width) - self.drag_start_step
                     if duration > 0 and duration != sel_duration:
                         self.add_event(step, row, sel_velocity, duration)
                     else:
@@ -913,8 +908,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
                 x1 = self.selected_cell[0] * self.step_width
                 x2 = x1 + self.step_width  # x pos right of event's first cell
                 # y pos of bottom of selected row
-                y1 = self.total_height - \
-                    self.selected_cell[1] * self.row_height
+                y1 = self.total_height - self.selected_cell[1] * self.row_height
                 y2 = y1 - self.row_height  # y pos of top of selected row
                 event_x = self.grid_canvas.canvasx(event.x)
                 event_y = self.grid_canvas.canvasy(event.y)
@@ -1311,8 +1305,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
             self.keymap_offset = int(max_keymap_offset)
         elif self.keymap_offset < 0:
             self.keymap_offset = 0
-        ypos = (self.scroll_height - self.keymap_offset *
-                self.row_height) / self.total_height
+        ypos = (self.scroll_height - self.keymap_offset * self.row_height) / self.total_height
         self.grid_canvas.yview_moveto(ypos)
         self.piano_roll.yview_moveto(ypos)
         # logging.debug(f"OFFSET: {self.keymap_offset} (keymap length: {len(self.keymap)})")
@@ -1448,14 +1441,15 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
     def select_cell(self, step=None, row=None):
         if not self.keymap:
             return
-
         # Check row boundaries
-        if row == None:
+        if row is None:
             row = self.selected_cell[1]
         if row < 0:
             row = 0
         elif row >= len(self.keymap):
             row = len(self.keymap) - 1
+        else:
+            row = int(row)
         # Check keymap offset
         if row >= self.keymap_offset + self.view_rows:
             # Note is off top of display
@@ -1468,16 +1462,17 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
         note = self.keymap[row]['note']
 
         # Check column boundaries
-        if step == None:
+        if step is None:
             step = self.selected_cell[0]
         if step < 0:
             step = 0
         elif step >= self.n_steps:
             step = self.n_steps - 1
+        else:
+            step = int(step)
         # Skip hidden (overlapping) cells
-        for previous in range(int(step) - 1, -1, -1):
-            prev_duration = ceil(
-                self.zynseq.libseq.getNoteDuration(previous, note))
+        for previous in range(step - 1, -1, -1):
+            prev_duration = ceil(self.zynseq.libseq.getNoteDuration(previous, note))
             if not prev_duration:
                 continue
             if prev_duration > step - previous:
@@ -1498,7 +1493,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
         elif step < self.step_offset:
             # Step is off left of display
             self.set_step_offset(step)
-        self.selected_cell = [int(step), row]
+        self.selected_cell = [step, row]
         # Duration & velocity
         duration = self.zynseq.libseq.getNoteDuration(step, note)
         offset = self.zynseq.libseq.getNoteOffset(step, note)
@@ -1603,8 +1598,8 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
             self.selected_cell[0] = int(n_steps) - 1
         self.keymap_offset = int(self.zynseq.libseq.getRefNote())
         if self.keymap_offset >= keymap_len:
-            self.keymap_offset = max(0, (keymap_len - self.view_rows) // 2)
-            self.selected_cell[1] = self.keymap_offset + self.view_rows // 2
+            self.keymap_offset = max(0, int((keymap_len - self.view_rows) / 2))
+            self.selected_cell[1] = int(self.keymap_offset + self.view_rows / 2)
         if self.duration > n_steps:
             self.duration = 1
         self.draw_grid()
@@ -1759,8 +1754,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
                     step = self.selected_cell[0]
                     index = self.selected_cell[1]
                     note = self.keymap[index]['note']
-                    sel_duration = self.zynseq.libseq.getNoteDuration(
-                        step, note)
+                    sel_duration = self.zynseq.libseq.getNoteDuration(step, note)
                     if sel_duration > 0:
                         duration = sel_duration
                     else:
@@ -1770,12 +1764,9 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
                     if duration > max_duration or duration < 0.05:
                         return
                     if sel_duration:
-                        sel_velocity = self.zynseq.libseq.getNoteVelocity(
-                            step, note)
-                        sel_offset = self.zynseq.libseq.getNoteOffset(
-                            step, note)
-                        self.add_event(
-                            step, self.selected_cell[1], sel_velocity, duration, sel_offset)
+                        sel_velocity = self.zynseq.libseq.getNoteVelocity(step, note)
+                        sel_offset = self.zynseq.libseq.getNoteOffset(step, note)
+                        self.add_event(step, self.selected_cell[1], sel_velocity, duration, sel_offset)
                     else:
                         self.duration = duration
                         self.select_cell()
@@ -1807,19 +1798,15 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
                     if duration > max_duration or duration < 0.05:
                         return
                     if sel_duration:
-                        sel_velocity = self.zynseq.libseq.getNoteVelocity(
-                            step, note)
-                        sel_offset = self.zynseq.libseq.getNoteOffset(
-                            step, note)
-                        self.add_event(step, index, sel_velocity,
-                                       duration, sel_offset)
+                        sel_velocity = self.zynseq.libseq.getNoteVelocity(step, note)
+                        sel_offset = self.zynseq.libseq.getNoteOffset(step, note)
+                        self.add_event(step, index, sel_velocity,duration, sel_offset)
                     else:
                         self.duration = duration
                         self.select_cell()
                 elif self.edit_param == EDIT_PARAM_VEL:
                     if sel_duration:
-                        sel_velocity = self.zynseq.libseq.getNoteVelocity(
-                            step, note)
+                        sel_velocity = self.zynseq.libseq.getNoteVelocity(step, note)
                         velocity = sel_velocity
                     else:
                         velocity = self.velocity
@@ -1828,8 +1815,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
                         return
                     self.set_velocity_indicator(velocity)
                     if sel_duration and velocity != sel_velocity:
-                        self.zynseq.libseq.setNoteVelocity(
-                            step, note, velocity)
+                        self.zynseq.libseq.setNoteVelocity(step, note, velocity)
                         self.draw_cell(step, index - self.keymap_offset)
                     else:
                         self.velocity = velocity
@@ -1856,8 +1842,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
                     self.zynseq.libseq.setStutterDur(step, note, val)
                     self.draw_cell(step, note - self.keymap_offset)
                 elif self.edit_param == EDIT_PARAM_CHANCE:
-                    val = self.zynseq.libseq.getNotePlayChance(
-                        step, note) + dval
+                    val = self.zynseq.libseq.getNotePlayChance(step, note) + dval
                     if val < 0:
                         val = 0
                     elif val > 100:
@@ -1909,8 +1894,7 @@ class zynthian_gui_patterneditor(zynthian_gui_base.zynthian_gui_base):
             return
         if type == "S":
             if self.edit_mode == EDIT_MODE_NONE:
-                note = self.toggle_event(
-                    self.selected_cell[0], self.selected_cell[1])
+                note = self.toggle_event( self.selected_cell[0], self.selected_cell[1])
                 if note:
                     self.play_note(note)
             else:

@@ -88,7 +88,7 @@ class zynthian_controller:
         self.midi_cc = None  # MIDI CC number to send CC messages from control
         self.midi_feedback = None  # [chan,cc] for MIDI control feedback
         self.midi_cc_momentary_switch = False
-        self.midi_cc_mode = -1                  # CC mode: -1=unknown,  0=absolute, 1=relative1, 2=relative2, 3=relative3
+        self.midi_cc_mode = -1                  # CC mode: -1=unknown,  0=abs, 1=rel1, 2=rel2, 3=rel3
         self.midi_cc_mode_detecting = 0         # Used by CC mode detection algorithm
         self.midi_cc_mode_detecting_ts = 0      # Used by CC mode detection algorithm
         self.midi_cc_mode_detecting_count = 0   # Used by CC mode detection algorithm
@@ -527,10 +527,9 @@ class zynthian_controller:
             self.midi_cc_mode_detect(val)
 
         # CC mode absolute
-        elif self.midi_cc_mode == 0:
+        if self.midi_cc_mode == 0:
             if self.is_logarithmic:
-                value = self.value_min + self.value_range * \
-                    (math.pow(10, val/127) - 1) / 9
+                value = self.value_min + self.value_range * (math.pow(10, val/127) - 1) / 9
             elif self.is_toggle:
                 if self.midi_cc_momentary_switch:
                     if val >= 64:
@@ -544,7 +543,9 @@ class zynthian_controller:
             else:
                 value = self.value_min + val * self.value_range / 127
 
-        else:
+            self.set_value(value, send)
+
+        elif self.midi_cc_mode > 0:
             # CC mode relative (1, 2 or 3)
             if self.midi_cc_mode == 1:
                 if val == 64:
@@ -584,10 +585,13 @@ class zynthian_controller:
                 self.nudge(dval, send=send)
                 return
 
-        self.set_value(value, send)
+            self.set_value(value, send)
 
     def midi_cc_mode_reset(self):
         self.midi_cc_mode = -1
+
+    def midi_cc_mode_set(self, cc_mode):
+        self.midi_cc_mode = cc_mode
 
     def midi_cc_mode_detect(self, val):
         """

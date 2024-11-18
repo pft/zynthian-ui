@@ -3,6 +3,7 @@ __all__ = [
     "zynthian_gui_config",
     "zynthian_gui_controller",
     "zynthian_gui_info",
+    "zynthian_gui_help",
     "zynthian_gui_selector",
     "zynthian_gui_details",
     "zynthian_gui_admin",

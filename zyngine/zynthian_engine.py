@@ -626,19 +626,16 @@ class zynthian_engine(zynthian_basic_engine):
                 # Build controller depending on array length ...
                 if ctrl[0] in processor.controllers_dict:
                     # Controller already exists so reconfigure with new settings
+                    zctrl = processor.controllers_dict[ctrl[0]]
                     if build_from_options:
-                        processor.controllers_dict[ctrl[0]].set_options(
-                            options)
+                        zctrl.set_options(options)
                     elif len(ctrl) > 3:
                         options['value'] = ctrl[2]
                         options['value_max'] = ctrl[3]
-                        processor.controllers_dict[ctrl[0]].set_options(
-                            options)
+                        zctrl.set_options(options)
                     elif len(ctrl) > 2:
                         options['value'] = ctrl[2]
-                        processor.controllers_dict[ctrl[0]].set_options(
-                            options)
-                    continue
+                        zctrl.set_options(options)
 
                 else:
                     if not build_from_options:
@@ -653,12 +650,9 @@ class zynthian_engine(zynthian_basic_engine):
                             options['value'] = ctrl[2]
                     # param 0 is symbol string, param 1 is options or midi cc or osc path
                     zctrl = zynthian_controller(self, ctrl[0], options)
-
-                if zctrl.midi_cc is not None:
-                    self.state_manager.chain_manager.add_midi_learn(
-                        zctrl.midi_chan, zctrl.midi_cc, zctrl)
-
-                processor.controllers_dict[zctrl.symbol] = zctrl
+                    processor.controllers_dict[zctrl.symbol] = zctrl
+                    if zctrl.midi_cc is not None:
+                        self.state_manager.chain_manager.add_midi_learn(zctrl.midi_chan, zctrl.midi_cc, zctrl)
 
         return processor.controllers_dict
 

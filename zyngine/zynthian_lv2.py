@@ -169,6 +169,11 @@ standalone_engine_info = {
     'AM': ["AudioMixer", "Audio Mixer Strip", "Audio Effect", "Other", True]
 }
 
+rpi5_plugins = [
+    "http://theusualsuspects.lv2.Osirus",
+    "http://theusualsuspects.lv2.OsTIrus"
+]
+
 ENGINE_DEFAULT_CONFIG_FILE = "{}/config/engine_config.json".format(
     os.environ.get('ZYNTHIAN_SYS_DIR'))
 ENGINE_CONFIG_FILE = "{}/engine_config.json".format(
@@ -334,6 +339,11 @@ def generate_engines_config_file(refresh=True, reset_rankings=None):
     global engines, engines_mtime
     genengines = {}
 
+    try:
+        rbpi_version_number = int(os.environ.get('RBPI_VERSION_NUMBER', '4'))
+    except:
+        rbpi_version_number = 4
+
     hash = hashlib.new('sha1')
     start = int(round(time.time()))
     try:
@@ -398,6 +408,10 @@ def generate_engines_config_file(refresh=True, reset_rankings=None):
         # Add LV2 plugins
         for plugin in world.get_all_plugins():
             engine_name = str(plugin.get_name())
+            engine_uri = str(plugin.get_uri())
+            # Skip plugins that doesn't work in the detected RBPi version
+            if rbpi_version_number < 5 and engine_uri in rpi5_plugins:
+                continue
             key = f"JV/{engine_name}"
             try:
                 engine_id = engines[key]['ID']
@@ -443,7 +457,7 @@ def generate_engines_config_file(refresh=True, reset_rankings=None):
                 'CAT': engine_cat,
                 'ENABLED': is_engine_enabled(key, False),
                 'INDEX': engine_index,
-                'URL': str(plugin.get_uri()),
+                'URL': engine_uri,
                 'UI': is_plugin_ui(plugin),
                 'DESCR': engine_descr,
                 "QUALITY": engine_quality,
@@ -608,7 +622,7 @@ def _generate_plugin_presets_cache(plugin):
     for bank in banks:
         label = world.get(bank, world.ns.rdfs.label, None)
         if label is None:
-            label = bank.split('#')[-1]
+            label = str(bank).split('#')[-1]
             logging.debug(f"Bank <{bank}> has no label! Using '{label}'")
 
         banks_dict[str(bank)] = str(label)

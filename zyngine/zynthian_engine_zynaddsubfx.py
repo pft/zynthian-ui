@@ -70,8 +70,7 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
 
         ['portamento time', '/part$i/ctl/portamento.time', 64],
         ['portamento up/down', '/part$i/ctl/portamento.updowntimestretch', 64],
-        ['threshold type', '/part$i/ctl/portamento.pitchthreshtype',
-         '<=', ['<=', '>=']],
+        ['threshold type', '/part$i/ctl/portamento.pitchthreshtype', '<=', ['<=', '>=']],
         ['threshold', '/part$i/ctl/portamento.pitchthresh', 3],
 
         ['portaprop on/off', '/part$i/ctl/portamento.proportional', 'off', 'off|on'],
@@ -108,17 +107,12 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
     _ctrl_screens = [
         ['main', ['volume', 'panning', 'filter cutoff', 'filter resonance']],
         ['mode', ['drum mode', 'sustain', 'assign mode', 'voice limit']],
-        ['portamento', ['portamento enable',
-                        'portamento auto', 'portamento receive']],
-        ['portamento time', ['portamento time',
-                             'portamento up/down', 'threshold', 'threshold type']],
-        ['portamento prop', ['portaprop on/off',
-                             'portaprop rate', 'portaprop depth']],
-        ['modulation', ['modulation', 'modulation amplitude',
-                        'modwheel depth', 'modwheel exp']],
+        ['portamento', ['portamento enable', 'portamento auto', 'portamento receive']],
+        ['portamento time', ['portamento time', 'portamento up/down', 'threshold', 'threshold type']],
+        ['portamento prop', ['portaprop on/off', 'portaprop rate', 'portaprop depth']],
+        ['modulation', ['modulation', 'modulation amplitude', 'modwheel depth', 'modwheel exp']],
         ['pitchwheel', ['bendrange split', 'bendrange down', 'bendrange']],
-        ['resonance', ['resonance center', 'rescenter depth',
-                       'resonance bandwidth', 'resbw depth']],
+        ['resonance', ['resonance center', 'rescenter depth', 'resonance bandwidth', 'resbw depth']],
         ['bandwidth', ['bandwidth', 'bandwidth depth', 'bandwidth exp']],
         ['depth', ['panning depth', 'filter.cutoff depth', 'filter.Q depth']],
         ['velocity', ['velocity sens.', 'velocity offs.']]

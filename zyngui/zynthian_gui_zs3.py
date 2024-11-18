@@ -85,7 +85,7 @@ class zynthian_gui_zs3(zynthian_gui_selector):
         idx = 2
         try:
             self.list_data.append(
-                ("zs3-0", self.zyngui.state_manager.zs3["zs3-0"], "Undo changes to current ZS3"))
+                ("zs3-0", self.zyngui.state_manager.zs3["zs3-0"], "Default state"))
             idx += 1
         except:
             pass
@@ -94,7 +94,7 @@ class zynthian_gui_zs3(zynthian_gui_selector):
         if len(self.zyngui.state_manager.zs3) > 1:
             self.list_data.append((None, None, "> SAVED ZS3s"))
         for id, state in self.zyngui.state_manager.zs3.items():
-            if id in ["last_zs3", "zs3-0"]:
+            if id == "zs3-0":
                 continue
             elif id.startswith("zs3"):
                 title = f"{state['title']}"
@@ -108,10 +108,9 @@ class zynthian_gui_zs3(zynthian_gui_selector):
                 else:
                     title = f"{state['title']} ({id})"
             self.list_data.append((id, state, title))
-            if 'last_zs3' in self.zyngui.state_manager.zs3:
-                if id == self.zyngui.state_manager.zs3['last_zs3']:
-                    self.index = idx
-                idx += 1
+            if id == self.zyngui.state_manager.last_zs3_id:
+                self.index = idx
+            idx += 1
 
         super().fill_list()
 

@@ -1,0 +1,47 @@
+
+body {
+	background: #000000;
+ 	color: #ffffff;
+	font-size: 150%;
+}
+
+h1 {
+	color: #ffffff;
+	font-size: 200%;
+}
+
+img.full {
+	width: 100%;
+}
+
+div.knobs_action_container {
+	float: right;
+	width: 30%;
+}
+div.knob_action {
+	margin-left: 1em;
+	margin-bottom: 2px;
+	padding-right: 4px;
+	font-size: 100%;
+	text-align: right;
+	background: #404040;
+}
+div.knob_action img {
+	height: 37px;
+	margin-left: 4px;
+	margin-bottom: 1px;
+	margin-top: 1px;
+	vertical-align: middle;
+}
+div.knob_action_1 {
+	border-right: 10px solid #C0D030;
+}
+div.knob_action_2 {
+	border-right: 10px solid #D030C0;
+}
+div.knob_action_3 {
+	border-right: 10px solid #30A0D0;
+}
+div.knob_action_4 {
+	border-right: 10px solid #40D030;
+}

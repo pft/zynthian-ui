@@ -691,6 +691,11 @@ class zynthian_gui_control(zynthian_gui_selector):
                         options["\u2612 Momentary => Latch"] = i
                     else:
                         options["\u2610 Momentary => Latch"] = i
+                else:
+                    if zctrl.midi_cc_mode == 0:
+                        options["\u2610 Relative Mode"] = i
+                    else:
+                        options["\u2612 Relative Mode"] = i
                 options[f"Chain learn '{zctrl.name}'..."] = i
                 options[f"Global learn '{zctrl.name}'..."] = i
             else:
@@ -741,6 +746,13 @@ class zynthian_gui_control(zynthian_gui_selector):
             else:
                 self.zgui_controllers[param].zctrl.midi_cc_momentary_switch = 1
             self.midi_learn_options(param)
+        elif parts[1] == "Relative":
+            if parts[0] == '\u2612':
+                self.zgui_controllers[param].zctrl.midi_cc_mode_set(0)
+            else:
+                self.zgui_controllers[param].zctrl.midi_cc_mode_set(-1)
+
+
 
     def show_xy(self, params=None):
         self.zyngui.show_screen("control_xy")

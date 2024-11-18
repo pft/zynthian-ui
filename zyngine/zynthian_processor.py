@@ -64,6 +64,7 @@ class zynthian_processor:
         self.engine = None
         self.name = eng_info["NAME"]
         self.midi_chan = None
+        self.midi_chan_engine = None
         self.jackname = None
         self.chain = None
         self.chain_id = None

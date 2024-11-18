@@ -292,30 +292,31 @@ class zynthian_gui_snapshot(zynthian_gui_selector):
             logging.warning("Failed to rename snapshot")
 
     def show_options(self, i, restrict_options):
-        fpath = self.list_data[i][0]
-        fname = self.list_data[i][2]
+        param = self.list_data[i]
+        fpath = param[0]
+        fname = param[2]
         options = {
-            "Load": fpath,
-            "Load Replace Chains": fpath,
-            "Load Merge Chains": fpath,
-            "Load Replace Sequences": fpath,
-            "Save": fname
+            "Load": self.list_data[i],
+            "Load Replace Chains": param,
+            "Load Merge Chains": param,
+            "Load Replace Sequences": param,
+            "Save": param
         }
         budir = dirname(fpath) + "/.backup"
         if isdir(budir):
-            options["Restore Backup"] = fpath
+            options["Restore Backup"] = param
         if not restrict_options:
             options.update({
-                "Rename": fname,
-                "Set Program": fname,
-                "Delete": fname
+                "Rename": param,
+                "Set Program": param,
+                "Delete": param
             })
         self.zyngui.screens['option'].config(fname, options, self.options_cb)
         self.zyngui.show_screen('option')
 
     def options_cb(self, option, param):
-        fpath = self.list_data[self.index][0]
-        fname = self.list_data[self.index][2]
+        fpath = param[0]
+        fname = param[2]
         parts = self.get_parts_from_path(fpath)
         if parts is None:
             logging.warning(
@@ -326,9 +327,9 @@ class zynthian_gui_snapshot(zynthian_gui_selector):
             self.load_snapshot(fpath)
         elif option == "Load Replace Chains":
             # self.zyngui.show_confirm("Loading chains from '%s' will destroy current chains..." % (fname), self.load_snapshot_chains, fpath)
-            self.load_snapshot_chains(fpath)
+            self.load_snapshot_chains(fpath, merge=False)
         elif option == "Load Merge Chains":
-            self.merge_snapshot(fpath)
+            self.load_snapshot_chains(fpath, merge=True)
         elif option == "Load Replace Sequences":
             # self.zyngui.show_confirm("Loading sequences from '%s' will destroy current sequences..." % (fname), self.load_snapshot_sequences, fpath)
             self.load_snapshot_sequences(fpath)
@@ -352,7 +353,7 @@ class zynthian_gui_snapshot(zynthian_gui_selector):
                 "Do you really want to delete '%s'" % fname, self.delete_confirmed, fpath)
 
     def load_snapshot(self, fpath):
-        if self.is_not_empty_snapshot():
+        if self.is_not_empty_snapshot() and fpath != self.sm.last_state_snapshot_fpath:
             self.sm.save_last_state_snapshot()
         state = self.sm.load_snapshot(fpath)
         if state is None:
@@ -362,19 +363,14 @@ class zynthian_gui_snapshot(zynthian_gui_selector):
                 return
         self.zyngui.show_screen('audio_mixer', self.zyngui.SCREEN_HMODE_RESET)
 
-    def load_snapshot_chains(self, fpath):
-        if self.is_not_empty_snapshot():
+    def load_snapshot_chains(self, fpath, merge=False):
+        if self.is_not_empty_snapshot() and fpath != self.sm.last_state_snapshot_fpath:
             self.sm.save_last_state_snapshot()
-        self.sm.load_snapshot(fpath, load_sequences=False)
-        self.zyngui.show_screen('audio_mixer', self.zyngui.SCREEN_HMODE_RESET)
-
-    def merge_snapshot(self, fpath):
-        self.sm.save_last_state_snapshot()
-        self.sm.load_snapshot(fpath, load_sequences=False, merge=True)
+        self.sm.load_snapshot(fpath, load_sequences=False, merge=merge)
         self.zyngui.show_screen('audio_mixer', self.zyngui.SCREEN_HMODE_RESET)
 
     def load_snapshot_sequences(self, fpath):
-        if self.is_not_empty_snapshot():
+        if self.is_not_empty_snapshot() and fpath != self.sm.last_state_snapshot_fpath:
             self.sm.save_last_state_snapshot()
         self.sm.load_snapshot(fpath, load_chains=False)
         self.zyngui.show_screen('zynpad', hmode=self.zyngui.SCREEN_HMODE_RESET)

@@ -22,17 +22,19 @@
 #
 # ******************************************************************************
 
-import copy
 import os
 import re
+import sys
+import copy
 import shutil
 import logging
-from os.path import isfile
 from subprocess import check_output, STDOUT
 
 from . import zynthian_lv2
 from . import zynthian_engine
 from . import zynthian_controller
+from zyncoder.zyncore import lib_zyncore
+from zyngine.ctrlinfo import *
 
 # ------------------------------------------------------------------------------
 # Jalv Engine Class => Engine for LV2 plugins
@@ -103,9 +105,12 @@ class zynthian_engine_jalv(zynthian_engine):
 
     plugin_ctrl_info = {
         "ctrls": {
-            'modulation wheel': [1, 0],
             'volume': [7, 98],
-            'sustain pedal': [64, 'off', 'off|on']
+            'panning': [10, 64],
+            'modulation wheel': [1, 0],
+            'sustain pedal': [64, 'off', ['off', 'on']],
+            'filter cutoff': [74, 64],
+            'filter resonance': [71, 64]
         },
         "ctrl_screens": {
             '_default_synth': ['modulation wheel', 'sustain pedal'],
@@ -210,31 +215,42 @@ class zynthian_engine_jalv(zynthian_engine):
                         logging.debug("Jack Name => {}".format(self.jackname))
                         break
 
-            # Set MIDI Controllers from hardcoded plugin info
-            try:
-                if self.plugin_name in self.plugin_ctrl_info['ctrl_screens']:
-                    ctrl_screen = self.plugin_ctrl_info['ctrl_screens'][self.plugin_name]
-                elif self.type == 'MIDI Synth':
-                    logging.info(
-                        "Using default MIDI controllers for '{}'.".format(self.plugin_name))
-                    ctrl_screen = self.plugin_ctrl_info['ctrl_screens']['_default_synth']
-                else:
-                    ctrl_screen = None
-                if ctrl_screen:
-                    self._ctrl_screens = [
-                        ['MIDI Controllers', copy.copy(ctrl_screen)]]
-                    self._ctrls = []
-                    for ctrl_name in ctrl_screen:
-                        self._ctrls.append(
-                            [ctrl_name] + self.plugin_ctrl_info['ctrls'][ctrl_name])
-                else:
-                    self._ctrls = []
-                    self._ctrl_screens = []
-            except:
-                logging.error(
-                    "Error setting MIDI controllers for '{}'.".format(self.plugin_name))
+            # Setup MIDI Controllers
+            self._ctrls = []
+            self._ctrl_screens = []
+
+            # Search for a custom controller config for this plugin
+            module_name = f"zyngine.ctrlinfo.ctrlinfo_{self.plugin_name}"
+            if module_name in sys.modules:
+                try:
+                    self._ctrls = getattr(sys.modules[module_name], "ctrls", None)
+                    self._ctrl_screens = getattr(sys.modules[module_name], "ctrl_screens", None)
+                    logging.info("Using custom MIDI controllers file for '{}'.".format(self.plugin_name))
+                except Exception as e:
+                    logging.error(f"Wrong ctrlinfo module => {e}")
+
+            # If not available or wrong, take from hardcoded controller configs
+            if not self._ctrls or not self._ctrl_screens:
                 self._ctrls = []
                 self._ctrl_screens = []
+                try:
+                    if self.plugin_name in self.plugin_ctrl_info['ctrl_screens']:
+                        logging.info("Using custom MIDI controllers for '{}'.".format(self.plugin_name))
+                        ctrl_screens = self.plugin_ctrl_info['ctrl_screens'][self.plugin_name]
+                    elif self.type == 'MIDI Synth':
+                        logging.info("Using default MIDI controllers for '{}'.".format(self.plugin_name))
+                        ctrl_screens = self.plugin_ctrl_info['ctrl_screens']['_default_synth']
+                    else:
+                        ctrl_screens = None
+                    if ctrl_screens:
+                        self._ctrl_screens = [['MIDI Controllers', copy.copy(ctrl_screens)]]
+                        for ctrl_name in ctrl_screens:
+                            self._ctrls.append([ctrl_name] + self.plugin_ctrl_info['ctrls'][ctrl_name])
+                except Exception as e:
+                    logging.error(f"Error setting MIDI controllers for '{self.plugin_name}' => {e}")
+
+            #logging.debug(f"CTRLS => {self._ctrls}")
+            #logging.debug(f"CTRL_SCREENS => {self._ctrl_screens}")
 
             # Generate LV2-Plugin Controllers
             self.lv2_monitors_dict = {}
@@ -274,11 +290,16 @@ class zynthian_engine_jalv(zynthian_engine):
     # ---------------------------------------------------------------------------
 
     def set_midi_chan(self, processor):
+        processor.midi_chan_engine = processor.midi_chan
         if self.plugin_name == "Triceratops":
-            self.lv2_zctrl_dict["midi_channel"].set_value(
-                processor.midi_chan+1.5)
+            self.lv2_zctrl_dict["midi_channel"].set_value(processor.midi_chan + 1.5)
         elif self.plugin_name.startswith("SO-"):
             self.lv2_zctrl_dict["channel"].set_value(processor.midi_chan)
+        elif self.plugin_name in ("Osirus", "OsTIrus"):
+            processor.midi_chan_engine = 0
+            lib_zyncore.zmop_set_midi_chan_trans(processor.chain.zmop_index,
+                                                 processor.midi_chan,
+                                                 processor.midi_chan_engine)
 
     # ----------------------------------------------------------------------------
     # Bank Managament
@@ -643,7 +664,14 @@ class zynthian_engine_jalv(zynthian_engine):
         return zctrls
 
     def send_controller_value(self, zctrl):
-        self.proc_cmd("set %d %.6f" % (zctrl.graph_path, zctrl.value))
+        try:
+            self.proc_cmd("set %d %.6f" % (zctrl.graph_path, zctrl.value))
+        except:
+            if zctrl.midi_cc:
+                lib_zyncore.zmop_send_ccontrol_change(zctrl.processor.chain.zmop_index,
+                                                      zctrl.processor.midi_chan_engine,
+                                                      zctrl.midi_cc,
+                                                      zctrl.get_ctrl_midi_val())
 
     # ---------------------------------------------------------------------------
     # API methods

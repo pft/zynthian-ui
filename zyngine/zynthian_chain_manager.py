@@ -1136,8 +1136,7 @@ class zynthian_chain_manager:
         Returns : True on success
         """
 
-        self.state_manager.start_busy(
-            "set_chain_state", None, "loading chains")
+        self.state_manager.start_busy("set_chain_state", None, "loading chains")
 
         # Clean all chains but don't stop unused engines
         if not merge:
@@ -1188,8 +1187,7 @@ class zynthian_chain_manager:
         if zctrl is None:
             return
 
-        logging.debug(
-            f"(chan={chan}, midi_cc={midi_cc}, zctrl={zctrl.symbol}, zmip={zmip})")
+        logging.debug(f"(chan={chan}, midi_cc={midi_cc}, zctrl={zctrl.symbol}, zmip={zmip})")
         self.remove_midi_learn(zctrl.processor, zctrl.symbol)
         if zmip is None:
             if zctrl.processor:
@@ -1213,6 +1211,13 @@ class zynthian_chain_manager:
                     self.absolute_midi_cc_binding[key].append(zctrl)
             else:
                 self.absolute_midi_cc_binding[key] = [zctrl]
+
+        # Ensure pedals are always learnt in absolute mode.
+        # TODO: This is not OK, just mitigates issue #1277 until a proper solution is implemented
+        #  => MIDI CC mode should be stored with MIDI learn info in chain manager, not in zctrl!!
+        #  => Anyway, it's not so bad, as handle_pedals also uses a fixed list of CC nums
+        if midi_cc in self.held_zctrls:
+            zctrl.midi_cc_mode_set(0)
 
         # TODO: Handle MD midi learn
             """
