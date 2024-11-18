@@ -80,28 +80,6 @@ uint8_t getMute(uint8_t channel);
  */
 void toggleMute(uint8_t channel);
 
-/** @brief  Set channel solo state
- *   @param  channel Index of channel
- *   @param  solo Solostatus (0: Normal, 1: Solo)
- */
-void setSolo(uint8_t channel, uint8_t solo);
-
-/** @brief  Get channel solo state
- *   @param  channel Index of channel
- *   @retval  uint8_t Solo status (0: Normal, 1: solo)
- */
-uint8_t getSolo(uint8_t channel);
-
-/** @brief  Toggles channel solo
- *   @param  channel Index of channel
- */
-void toggleSolo(uint8_t channel);
-
-/** @brief  Get the global solo state
- *  @retval uint8_t 1 if any strip is solo or 0 if no strips are solo
- */
-uint8_t getGlobalSolo();
-
 /** @brief  Set channel mono state
  *   @param  channel Index of channel
  *   @param  mono (0: Stereo, 1: Mono)

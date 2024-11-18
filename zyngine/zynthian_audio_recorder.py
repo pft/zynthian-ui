@@ -77,7 +77,10 @@ class zynthian_audio_recorder:
         return "{}/{}.{:03d}.wav".format(path, filename, index)
 
     def arm(self, processor, arm):
-        src = f"{processor.jackname}:output_{processor.mixer_chan:02d}"
+        if isinstance(processor, str):
+            src = processor
+        else:
+            src = f"{processor.jackname}:output_{processor.mixer_chan:02d}"
         if arm:
             self.armed.add(src)
             zynsigman.send(zynsigman.S_AUDIO_RECORDER,

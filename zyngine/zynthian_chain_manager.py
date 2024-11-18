@@ -176,14 +176,13 @@ class zynthian_chain_manager:
     # Chain Management
     # ------------------------------------------------------------------------
 
-    def add_chain(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False, mixbus=False, zmop_index=None, title="", chain_pos=None):
+    def add_chain(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False, zmop_index=None, title="", chain_pos=None):
         """Add a chain
 
         chain_id: UID of chain (None to get next available)
         midi_chan : MIDI channel associated with chain
         midi_thru : True to enable MIDI thru for empty chain (Default: False)
         audio_thru : True to enable audio thru for empty chain (Default: False)
-        mixbus : True to add an audio effects send/return loop
         zmop_index : MIDI router output (Default: None)
         title : Chain title (Default: None)
         chain_pos : Position to insert chain (Default: End)
@@ -208,12 +207,11 @@ class zynthian_chain_manager:
         if chain_id in self.chains:
             self.chains[chain_id].midi_thru = midi_thru
             self.chains[chain_id].audio_thru = audio_thru
-            self.chains[chain_id].mixbus = mixbus
             self.state_manager.end_busy("add_chain")
             return chain_id
 
         # Create chain instance
-        chain = zynthian_chain(chain_id, midi_chan, midi_thru, audio_thru, mixbus)
+        chain = zynthian_chain(chain_id, midi_chan, midi_thru, audio_thru)
         if not chain:
             return None
         self.chains[chain_id] = chain
@@ -256,9 +254,7 @@ class zynthian_chain_manager:
             chain_pos = 0
             for chain_pos, id in enumerate(self.ordered_chain_ids):
                 if id == 0:
-                    break
-                if not mixbus and self.chains[id].mixbus:
-                    break
+                    break # Position all chains before main bus
         self.ordered_chain_ids.insert(chain_pos, chain_id)
 
         logging.debug(
@@ -287,16 +283,12 @@ class zynthian_chain_manager:
             audio_thru = chain_state['audio_thru']
         else:
             audio_thru = False
-        if 'mixbus' in chain_state:
-            mixbus = chain_state['mixbus']
-        else:
-            mixbus = False
         if 'zmop_index' in chain_state:
             zmop_index = chain_state['zmop_index']
         else:
             zmop_index = None
 
-        chain_id = self.add_chain(chain_id, midi_chan=midi_chan, midi_thru=midi_thru, audio_thru=audio_thru, mixbus=mixbus,
+        chain_id = self.add_chain(chain_id, midi_chan=midi_chan, midi_thru=midi_thru, audio_thru=audio_thru,
                        zmop_index=zmop_index, title=title)
 
         # Set CC route state
@@ -344,9 +336,11 @@ class zynthian_chain_manager:
                         self.midi_chan_2_chain_ids[mc].remove(chain_id)
                         lib_zyncore.ui_send_ccontrol_change(mc, 120, 0)
 
-            if chain.is_audio():
-                #TODO: Mute chain whilst removing
-                pass
+            update_fxreturns = False
+            if chain.zynmixer:
+                chain.zynmixer.zynmixer.set_mute(chain.zynmixer.mixer_chan, True) # Mute chain whilst removing
+                if chain.zynmixer.zynmixer.mixbus:
+                    update_fxreturns = True
 
             chain.reset()
             if chain_id != 0:
@@ -367,6 +361,15 @@ class zynthian_chain_manager:
                 chain_pos -= 1
             self.set_active_chain_by_index(chain_pos)
         self.state_manager.purge_zs3()
+
+        if update_fxreturns:
+            i = 1
+            for chain_id in self.ordered_chain_ids:
+                chain = self.chains[chain_id]
+                if chain.title.startswith("Effect Return "):
+                    chain.title = f"Effect Return {i}"
+                    i += 1
+
         self.state_manager.end_busy("remove_chain")
         return True
 
@@ -459,7 +462,7 @@ class zynthian_chain_manager:
     def get_chain_id_by_mixer_chan(self, chan):
         """Get a chain by the mixer channel"""
 
-        for chain_id, chain in self.chains.items():
+        for chain in self.chains.values():
             for slot in chain.audio_slots:
                 if slot[0].eng_code == "AM":
                     return slot[0].mixer_chan
@@ -812,6 +815,8 @@ class zynthian_chain_manager:
             # TODO: Fails to detect MIDI only chains in snapshots
             engine = self.start_engine(processor, eng_code, eng_config)
             if engine:
+                if eng_code == "AM":
+                    chain.zynmixer = processor
                 #chain.rebuild_graph()
                 # Update group chains
                 for src_chain in self.chains.values():
@@ -844,10 +849,10 @@ class zynthian_chain_manager:
 
         if chain.is_audio():
             # Audio chain so mute main output whilst making change (blunt but effective)
-            mute = self.state_manager.zynmixer_bus.get_mute(0, True)
-            self.state_manager.zynmixer_bus.set_mute(0, True, True, False)
+            mute = self.state_manager.zynmixer_bus.get_mute(0)
+            self.state_manager.zynmixer_bus.set_mute(0, True)
             zynautoconnect.request_audio_connect(True)
-            self.state_manager.zynmixer_bus.set_mute(0, True, mute, False)
+            self.state_manager.zynmixer_bus.set_mute(0, mute)
         zynautoconnect.request_midi_connect(True)
         return True
 

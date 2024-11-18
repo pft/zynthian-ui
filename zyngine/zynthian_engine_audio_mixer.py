@@ -27,6 +27,10 @@ import logging
 
 from zyngine import zynthian_engine
 from zyngine import zynthian_controller
+from zyngine.zynthian_signal_manager import zynsigman
+from zynlibs.zynmixer.zynmixer import SS_ZYNMIXER_SET_VALUE
+
+import zynautoconnect
 
 # -------------------------------------------------------------------------------
 # zynmixer channel strip engine
@@ -83,7 +87,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     'is_toggle': True,
                     'value_max': 1,
                     'value_default': 0,
-                    'value': processor.zynmixer.get_solo(processor.mixer_chan),
+                    'value': 0,
                     'processor': processor,
                     'labels': ['off', 'on']
                 }),
@@ -152,7 +156,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                             'processor': processor,
                             'graph_path': ["send_mode", send]
                         })
-                        processor.ctrl_screens_dict[f"send {send}"] = [processor.controllers_dict[symbol], processor.controllers_dict[f"{symbol}_mode"]]
+                        processor.ctrl_screens_dict[f"send {send + 1}"] = [processor.controllers_dict[symbol], processor.controllers_dict[f"{symbol}_mode"]]
                 else:
                     # Check that processor does not have send control
                     try:
@@ -171,8 +175,10 @@ class zynthian_engine_audio_mixer(zynthian_engine):
             if processor.chain_id:
                 # FX chain
                 processor.mixer_chan = self.state_manager.zynmixer_bus.add_strip()
-                processor.name = f"Effect Return {processor.mixer_chan}"
                 send = self.state_manager.zynmixer_chan.add_send()
+                if processor.mixer_chan != send:
+                    logging.warning("FX send/return index mismatch")
+                processor.name = f"Effect Return {self.state_manager.zynmixer_chan.get_send_count()}"
             else:
                 # Main mixbus
                 processor.mixer_chan = 0
@@ -209,9 +215,18 @@ class zynthian_engine_audio_mixer(zynthian_engine):
             elif zctrl.symbol == "record":
                 #TODO: Use jackname to arm
                 self.state_manager.audio_recorder.arm(zctrl.processor, zctrl.value)
-            elif zctrl.symbol == "solo" and zctrl.processor.zynmixer.mixbus and zctrl.processor.mixer_chan == 0 and zctrl.value == 1:
-                for processor in self.processors:
-                        processor.controllers_dict["solo"].set_value(0)
+            elif zctrl.symbol == "solo":
+                if zctrl.processor.chain_id == 0 and zctrl.value == 1:
+                    for processor in self.processors:
+                        processor.controllers_dict["solo"].set_value(0, False)
+                        zynautoconnect.solo(processor.chain_id, 0)
+                else:
+                    zynautoconnect.solo(zctrl.processor.chain_id, zctrl.value)
+                zynautoconnect.request_audio_connect(True)
+                zynsigman.send(zynsigman.S_AUDIO_MIXER, SS_ZYNMIXER_SET_VALUE,
+                    mixbus=zctrl.processor.zynmixer.mixbus,
+                    channel=zctrl.processor.mixer_chan,
+                    symbol="solo", value=zctrl.value)
             else:
                 getattr(zctrl.processor.zynmixer, f'set_{zctrl.symbol}')(
                     zctrl.processor.mixer_chan, zctrl.value)

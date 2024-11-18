@@ -446,9 +446,7 @@ class zynthian_engine_setbfree(zynthian_engine):
                     "Manuals config don't allow creating processor(2)")
                 return
 
-        # Disable mixer strip for extra manuals
-        if n == 0:
-            self.state_manager.chain_manager.add_processor(processor.chain_id, "AM")
+        # TODO: Disable mixer strip for extra manuals
 
         self.set_midi_chan(processor)
         super().add_processor(processor)

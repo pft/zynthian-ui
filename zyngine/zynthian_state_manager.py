@@ -227,11 +227,11 @@ class zynthian_state_manager:
         # Start VNC as configured
         self.default_vncserver()
 
-        self.chain_manager.add_chain(0)
-        self.chain_manager.add_processor(0, "AM", eng_config={"mixbus":True})
+        self.ctrldev_manager = zynthian_ctrldev_manager(self)
         zynautoconnect.start(self)
         self.jack_period = self.get_jackd_blocksize() / self.get_jackd_samplerate()
-        self.ctrldev_manager = zynthian_ctrldev_manager(self)
+        self.chain_manager.add_chain(0)
+        self.chain_manager.add_processor(0, "AM", eng_config={"mixbus":True})
         self.reload_midi_config()
         self.create_audio_player()
         self.exit_flag = False

@@ -37,7 +37,7 @@ class zynthian_chain:
     # Initialization
     # ------------------------------------------------------------------------
 
-    def __init__(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False, mixbus=False):
+    def __init__(self, chain_id, midi_chan=None, midi_thru=False, audio_thru=False):
         """ Create an instance of a chain
 
         A chain contains zero or more slots.
@@ -51,7 +51,6 @@ class zynthian_chain:
         midi_chan : Optional MIDI channel for chain input / control
         midi_thru : True to enable MIDI thru for empty chain
         audio_thru : True to enable audio thru for empty chain
-        mixbus: True to configure as an effects loop chain
         """
 
         # Each slot contains a list of parallel processors
@@ -66,7 +65,7 @@ class zynthian_chain:
         self.zmop_index = None
         self.midi_thru = midi_thru  # True to pass MIDI if chain empty
         self.audio_thru = audio_thru  # True to pass audio if chain empty
-        self.mixbus = mixbus # True if chain is fed from fxsend and feeds fxreturn
+        self.zynmixer = None # zynmixer (AM) processor
         self.midi_in = []
         self.midi_out = []
         self.audio_in = []
@@ -97,7 +96,7 @@ class zynthian_chain:
             self.audio_thru = True
         else:
             self.title = ""
-            if self.mixbus:
+            if self.zynmixer and self.zynmixer.zynmixer.mixbus:
                 self.audio_in = [] #TODO: Should this be fx send?
             elif self.audio_thru:
                 self.audio_in = [1, 2]
@@ -114,6 +113,7 @@ class zynthian_chain:
         except:
             self.current_processor = None
         self.remove_all_processors()
+        self.rebuild_graph()
 
     def get_slots_by_type(self, type):
         """Get the list of slots
@@ -303,7 +303,7 @@ class zynthian_chain:
                     if self.synth_slots:
                         for proc in self.synth_slots[-1]:
                             sources.append(proc.get_jackname())
-                    elif self.mixbus:
+                    elif self.zynmixer and self.zynmixer.zynmixer.mixbus:
                         for am_slot in self.audio_slots:
                             if am_slot[0].eng_code == "AM":
                                 sources = [f"zynmixer_chan:send_{am_slot[0].mixer_chan:02d}"]
@@ -567,16 +567,20 @@ class zynthian_chain:
         """
 
         slots = self.get_slots_by_type(processor.type)
-        if len(slots) == 0:
+        if len(slots) == 0 or processor.eng_code == "AM":
             slots.append([processor])
         else:
             if slot is None or slot < 0 or slot > len(slots):
                 # Append to end of chain
+                slot = len(slots)
                 if processor.type == "Audio Effect":
                     for idx in range(len(slots)):
                         if slots[idx][0].eng_code == "AM":
+                            slot = idx
                             break
-                    slots.insert(idx, [processor])
+                else:
+                    slot = -1
+                slots.insert(slot, [processor])
             else:
                 # Add parallel processor
                 slots[slot].append(processor)

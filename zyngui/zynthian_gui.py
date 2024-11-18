@@ -925,7 +925,6 @@ class zynthian_gui:
                         self.modify_chain_status["midi_chan"],
                         self.modify_chain_status["midi_thru"],
                         self.modify_chain_status["audio_thru"],
-                        self.modify_chain_status["mixbus"],
                         zmop_index
                     )
                     if chain_id is None:
@@ -936,10 +935,10 @@ class zynthian_gui:
                         chain_id,
                         self.modify_chain_status["engine"]
                     )
-                    if self.chain_manager.chains[chain_id].is_audio() and self.chain_manager.chains[chain_id].get_slot_count("Audio Effect") == 0:
+                    if self.chain_manager.chains[chain_id].is_audio():
                         am_proc = self.chain_manager.add_processor(chain_id, "AM", eng_config={"mixbus": self.modify_chain_status["mixbus"]})
                         if self.modify_chain_status['mixbus']:
-                            self.chain_manager.chains[chain_id].set_title(f"FX Return {am_proc.mixer_chan}")
+                            self.chain_manager.chains[chain_id].set_title(am_proc.name)
                     zynautoconnect.request_audio_connect(True)
                     zynautoconnect.request_midi_connect(True)
                     # self.modify_chain_status = {"midi_thru": False, "audio_thru": False}

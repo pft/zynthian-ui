@@ -451,10 +451,7 @@ class zynthian_gui_mixer_strip():
         if self.chain is None:
             self.hide()
         else:
-            for slot in self.chain.audio_slots:
-                if slot[0].eng_code == "AM":
-                    self.mixer_proc = slot[0]
-                    break
+            self.mixer_proc = self.chain.zynmixer
             self.show()
 
     def set_volume(self, value):
@@ -509,7 +506,6 @@ class zynthian_gui_mixer_strip():
         """
         if self.mixer_proc:
             self.mixer_proc.controllers_dict['mute'].set_value(value)
-        # self.parent.refresh_visible_strips()
 
     def set_solo(self, value):
         """ Function to set solo
@@ -519,14 +515,6 @@ class zynthian_gui_mixer_strip():
             self.mixer_proc.controllers_dict['solo'].set_value(value)
             if self.chain_id == 0:
                 self.parent.refresh_visible_strips()
-
-    def set_mono(self, value):
-        """ Function to toggle mono
-        value: Mono value (True/False)
-        """
-        if self.mixer_proc:
-            self.mixer_proc.controllers_dict['mono'].set_value(value)
-        self.parent.refresh_visible_strips()
 
     def toggle_mute(self):
         """ Function to toggle mute
@@ -539,12 +527,6 @@ class zynthian_gui_mixer_strip():
         """
         if self.mixer_proc:
             self.set_solo(int(not self.mixer_proc.controllers_dict['solo'].value))
-
-    def toggle_mono(self):
-        """ Function to toggle mono
-        """
-        if self.mixer_proc:
-            self.set_mono(int(not self.mixer_proc.controllers_dict['mono'].value))
 
     # --------------------------------------------------------------------------
     # UI event management
@@ -702,7 +684,7 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
     def __init__(self):
         super().__init__(has_backbutton=False)
 
-        self.chan2strip = {} # Map of audio strips, indexed by (zynmixer, channel)
+        self.chan2strip = {} # Map of audio strips, indexed by zynmixer processor object
         self.highlighted_strip = None  # highligted mixer strip object
         self.moving_chain = False  # True if moving a chain left/right
 
@@ -876,19 +858,18 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             if ctrl[0]:
                 ctrl[0].draw_control(ctrl[1])
 
-    def update_control(self, zynmixer, channel, symbol, value):
+    def update_control(self, mixbus, channel, symbol, value):
         """Mixer control update signal handler
         """
 
         try:
-            strip = self.chan2strip[(zynmixer, channel)]
+            strip = self.chan2strip[(mixbus, channel)]
         except:
             strip = None
         if not strip or not strip.chain or strip.mixer_proc.mixer_chan is None:
             return
         self.pending_refresh_queue.add((strip, symbol))
         if symbol == "level":
-            value = strip.zctrls["level"].value
             if value > 0:
                 level_db = 20 * log10(value)
                 self.set_title(
@@ -979,7 +960,7 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             strip.set_chain(chain_id)
             # strip.draw_control()
             if strip.chain.is_audio():
-                self.chan2strip[(strip.mixer_proc.zynmixer, strip.mixer_proc.mixer_chan)] = strip
+                self.chan2strip[(strip.mixer_proc.zynmixer.mixbus, strip.mixer_proc.mixer_chan)] = strip
             if chain_id == self.zyngui.chain_manager.active_chain_id:
                 active_strip = strip
             strip_index += 1
@@ -989,8 +970,10 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             strip.set_chain(None)
             strip.zctrls = None
 
-        self.chan2strip[(self.zyngui.state_manager.zynmixer_bus, 0)] = self.main_mixbus_strip
-        self.main_mixbus_strip.draw_control()
+        strip = self.main_mixbus_strip
+        strip.set_chain(0)
+        self.chan2strip[(strip.mixer_proc.zynmixer.mixbus, strip.mixer_proc.mixer_chan)] = self.main_mixbus_strip
+        #strip.draw_control()
         return active_strip
 
     # --------------------------------------------------------------------------
@@ -1126,6 +1109,8 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             self.zyngui.back_screen()
 
     def end_moving_chain(self):
+        if not self.moving_chain:
+            return
         if zynthian_gui_config.enable_touch_navigation:
             self.show_back_button(False)
         self.moving_chain = False
