@@ -189,11 +189,12 @@ class zynthian_engine_audio_mixer(zynthian_engine):
             processor.jackname = "zynmixer_chan"
             processor.mixer_chan = self.state_manager.zynmixer_chan.add_strip()
             processor.name = f"Mixer Channel Strip {processor.mixer_chan + 1}"
-        self.refresh_fx_send()
         processor.refresh_controllers()
+        self.refresh_fx_send()
         return
 
     def remove_processor(self, processor):
+        processor.zynmixer.set_mute(processor.mixer_chan, 1)
         super().remove_processor(processor)
         processor.zynmixer.remove_strip(processor.mixer_chan)
         if processor.zynmixer == self.state_manager.zynmixer_bus:

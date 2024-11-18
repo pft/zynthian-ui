@@ -376,7 +376,6 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
 }
 
 void onJackConnect(jack_port_id_t source, jack_port_id_t dest, int connect, void* args) {
-    pthread_mutex_lock(&mutex);
     for (uint8_t chan = 0; chan < MAX_CHANNELS; chan++) {
         if (g_channelStrips[chan] == NULL)
             continue;
@@ -389,7 +388,6 @@ void onJackConnect(jack_port_id_t source, jack_port_id_t dest, int connect, void
         else
             g_channelStrips[chan]->outRouted = 0;
     }
-    pthread_mutex_unlock(&mutex);
 }
 
 int onJackSamplerate(jack_nframes_t nSamplerate, void* arg) {
@@ -780,67 +778,69 @@ int8_t addStrip() {
     for (chan = 0; chan < MAX_CHANNELS; ++chan) {
         if (g_channelStrips[chan])
             continue;
-        g_channelStrips[chan] = malloc(sizeof(struct channel_strip));
-        g_channelStrips[chan]->level      = 0.0;
-        g_channelStrips[chan]->reqlevel   = 0.8;
-        g_channelStrips[chan]->balance    = 0.0;
-        g_channelStrips[chan]->reqbalance = 0.0;
-        g_channelStrips[chan]->mute       = 0;
-        g_channelStrips[chan]->mono       = 0;
-        g_channelStrips[chan]->ms         = 0;
-        g_channelStrips[chan]->phase      = 0;
-        g_channelStrips[chan]->normalise  = 0;
-        g_channelStrips[chan]->inRouted   = 0;
-        g_channelStrips[chan]->outRouted  = 0;
-        g_channelStrips[chan]->enable_dpm = 0;
-        for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
-            g_channelStrips[chan]->send[send] = 0.0;
-            g_channelStrips[chan]->sendMode[send] = 0;
+        struct channel_strip* strip = malloc(sizeof(struct channel_strip));
+        if (strip == NULL) {
+            fprintf(stderr, "Failed to allocate memory for ne channel strip.\n");
+            return -1;
         }
         char name[11];
         sprintf(name, "input_%02da", chan);
-        pthread_mutex_lock(&mutex);
-        if (!(g_channelStrips[chan]->inPortA = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
+        
+        if (!(strip->inPortA = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
             fprintf(stderr, "libzynmixer: Cannot register %s\n", name);
-            free(g_channelStrips[chan]);
-            pthread_mutex_unlock(&mutex);
+            free(strip);
             return -1;
         }
         sprintf(name, "input_%02db", chan);
-        if (!(g_channelStrips[chan]->inPortB = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
+        if (!(strip->inPortB = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
             fprintf(stderr, "libzynmixer: Cannot register %s\n", name);
-            jack_port_unregister(g_jackClient, g_channelStrips[chan]->inPortA);
-            free(g_channelStrips[chan]);
-            g_channelStrips[chan] = NULL;
-            pthread_mutex_unlock(&mutex);
+            jack_port_unregister(g_jackClient, strip->inPortA);
+            free(strip);
             return -1;
         }
         sprintf(name, "output_%02da", chan);
-        if (!(g_channelStrips[chan]->outPortA = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
+        if (!(strip->outPortA = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
             fprintf(stderr, "libzynmixer: Cannot register %s\n", name);
-            jack_port_unregister(g_jackClient, g_channelStrips[chan]->inPortA);
-            jack_port_unregister(g_jackClient, g_channelStrips[chan]->inPortB);
-            free(g_channelStrips[chan]);
-            g_channelStrips[chan] = NULL;
-            pthread_mutex_unlock(&mutex);
+            jack_port_unregister(g_jackClient, strip->inPortA);
+            jack_port_unregister(g_jackClient, strip->inPortB);
+            free(strip);
             return -1;
         }
         sprintf(name, "output_%02db", chan);
-        if (!(g_channelStrips[chan]->outPortB = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
+        if (!(strip->outPortB = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
             fprintf(stderr, "libzynmixer: Cannot register %s\n", name);
-            jack_port_unregister(g_jackClient, g_channelStrips[chan]->inPortA);
-            jack_port_unregister(g_jackClient, g_channelStrips[chan]->inPortB);
-            jack_port_unregister(g_jackClient, g_channelStrips[chan]->outPortA);
-            free(g_channelStrips[chan]);
-            g_channelStrips[chan] = NULL;
-            pthread_mutex_unlock(&mutex);
+            jack_port_unregister(g_jackClient, strip->inPortA);
+            jack_port_unregister(g_jackClient, strip->inPortB);
+            jack_port_unregister(g_jackClient, strip->outPortA);
+            free(strip);
             return -1;
         }
-        g_channelStrips[chan]->dpmAlast  = 100.0;
-        g_channelStrips[chan]->dpmBlast  = 100.0;
-        g_channelStrips[chan]->holdAlast = 100.0;
-        g_channelStrips[chan]->holdBlast = 100.0;
+        strip->level      = 0.0;
+        strip->reqlevel   = 0.8;
+        strip->balance    = 0.0;
+        strip->reqbalance = 0.0;
+        strip->mute       = 0;
+        strip->mono       = 0;
+        strip->ms         = 0;
+        strip->phase      = 0;
+        strip->normalise  = 0;
+        strip->inRouted   = 0;
+        strip->outRouted  = 0;
+        strip->enable_dpm = 0;
+        for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
+            strip->send[send] = 0.0;
+            strip->sendMode[send] = 0;
+        }
+        strip->dpmA = strip->holdA = 0.0;
+        strip->dpmB = strip->holdB = 0.0;
+        strip->dpmAlast  = 100.0;
+        strip->dpmBlast  = 100.0;
+        strip->holdAlast = 100.0;
+        strip->holdBlast = 100.0;
+        pthread_mutex_lock(&mutex);
+        g_channelStrips[chan] = strip;
         pthread_mutex_unlock(&mutex);
+        
         return chan;
     }
     return -1;
@@ -855,14 +855,15 @@ int8_t removeStrip(uint8_t chan) {
 #endif
     if (chan >= MAX_CHANNELS || g_channelStrips[chan] == NULL)
         return -1;
+    struct channel_strip* pstrip = g_channelStrips[chan];
     pthread_mutex_lock(&mutex);
-    jack_port_unregister(g_jackClient, g_channelStrips[chan]->inPortA);
-    jack_port_unregister(g_jackClient, g_channelStrips[chan]->inPortB);
-    jack_port_unregister(g_jackClient, g_channelStrips[chan]->outPortA);
-    jack_port_unregister(g_jackClient, g_channelStrips[chan]->outPortB);
-    free(g_channelStrips[chan]);
     g_channelStrips[chan] = NULL;
     pthread_mutex_unlock(&mutex);
+    jack_port_unregister(g_jackClient, pstrip->inPortA);
+    jack_port_unregister(g_jackClient, pstrip->inPortB);
+    jack_port_unregister(g_jackClient, pstrip->outPortA);
+    jack_port_unregister(g_jackClient, pstrip->outPortB);
+    free(pstrip);
     return chan;
 }
 
@@ -872,33 +873,31 @@ int8_t addSend() {
 #else
     for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
         if (g_fxSends[send] == NULL) {
-            pthread_mutex_lock(&mutex);
-            g_fxSends[send] = malloc(sizeof(struct fx_send));
-            if (!g_fxSends[send]) {
-                pthread_mutex_unlock(&mutex);
+            struct fx_send* psend = malloc(sizeof(struct fx_send));
+            if (!psend) {
                 fprintf(stderr, "Failed to allocated memory for effect send %d\n", send);
                 return -1;
             }
             char name[11];
             sprintf(name, "send_%02da", send + 1);
-            if (!(g_fxSends[send]->outPortA = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
-                free(g_fxSends[send]);
-                g_fxSends[send] = NULL;
-                pthread_mutex_unlock(&mutex);
+            if (!(psend->outPortA = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
+                free(psend);
+                psend = NULL;
                 fprintf(stderr, "libzynmixer: Cannot register %s\n", name);
                 return -1;
             }
             sprintf(name, "send_%02db", send + 1);
-            if (!(g_fxSends[send]->outPortB = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
-                jack_port_unregister(g_jackClient, g_fxSends[send]->outPortA);
-                free(g_fxSends[send]);
-                pthread_mutex_unlock(&mutex);
+            if (!(psend->outPortB = jack_port_register(g_jackClient, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
+                jack_port_unregister(g_jackClient, psend->outPortA);
+                free(psend);
                 fprintf(stderr, "libzynmixer: Cannot register %s\n", name);
                 return -1;
             }
-            g_fxSends[send]->bufferA = jack_port_get_buffer(g_fxSends[send]->outPortA, g_buffersize);
-            g_fxSends[send]->bufferB = jack_port_get_buffer(g_fxSends[send]->outPortB, g_buffersize);
-            g_fxSends[send]->level = 1.0;
+            psend->bufferA = jack_port_get_buffer(psend->outPortA, g_buffersize);
+            psend->bufferB = jack_port_get_buffer(psend->outPortB, g_buffersize);
+            psend->level = 1.0;
+            pthread_mutex_lock(&mutex);
+            g_fxSends[send] = psend;
             ++g_sendCount;
             pthread_mutex_unlock(&mutex);
             return send + 1;
@@ -917,13 +916,14 @@ uint8_t removeSend(uint8_t send) {
     --send; // We expose sends at 1-based so need to decrement to access array
     if (send >= MAX_CHANNELS || g_fxSends[send] == NULL)
         return 1;
+    struct fx_send* pstrip = g_fxSends[send];
     pthread_mutex_lock(&mutex);
-    jack_port_unregister(g_jackClient, g_fxSends[send]->outPortA);
-    jack_port_unregister(g_jackClient, g_fxSends[send]->outPortB);
-    free(g_fxSends[send]);
     g_fxSends[send] = NULL;
     --g_sendCount;
     pthread_mutex_unlock(&mutex);
+    jack_port_unregister(g_jackClient, pstrip->outPortA);
+    jack_port_unregister(g_jackClient, pstrip->outPortB);
+    free(pstrip);
     return 0;
 #endif
 }
