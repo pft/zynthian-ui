@@ -96,9 +96,6 @@ class ZynMixer():
         self.lib_zynmixer.getNormalise.argtypes = [ctypes.c_uint8]
         self.lib_zynmixer.getNormalise.restype = ctypes.c_uint8
 
-        self.lib_zynmixer.getStripCount.restype = ctypes.c_uint8
-        self.lib_zynmixer.getSendCount.restype = ctypes.c_uint8
-
         self.lib_zynmixer.reset.argtypes = [ctypes.c_uint8]
 
         self.lib_zynmixer.getDpm.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
@@ -147,18 +144,6 @@ class ZynMixer():
         """
 
         return self.lib_zynmixer.removeStrip(chan)
-
-    def get_strip_count(self):
-        """
-        Get the quantity of mixer channel strips
-        
-        Returns
-        -------
-        int
-            Qauntity of mixer channe strips
-        """
-
-        return self.lib_zynmixer.getStripCount()
 
     def add_send(self):
         """

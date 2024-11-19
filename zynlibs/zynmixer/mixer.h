@@ -232,11 +232,6 @@ uint8_t removeSend(uint8_t send);
  */
 uint8_t getMaxChannels();
 
-/** @brief Get quantity of mixer channel strips
- *  @retval uint8_t Quantity of mixer channel strips
- */
-uint8_t getStripCount();
-
 /** @brief Get quantity of effect sends
  *  @retval uint8_t Quantity of effect sends
  */

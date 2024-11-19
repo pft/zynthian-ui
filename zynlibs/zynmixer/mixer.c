@@ -49,8 +49,9 @@ int g_oscfd = -1;        // File descriptor for OSC socket
 int g_bOsc  = 0;         // True if OSC client subscribed
 pthread_t g_eventThread; // ID of low priority event thread
 int g_sendEvents = 1;    // Set to 0 to exit event thread
-uint8_t g_stripCount = 0; // Quantity of mixer strips
 uint8_t g_sendCount = 0; // Quantity of effect sends
+uint8_t g_lastStrip = 1; // Highest index of any strips
+uint8_t g_lastSend  = 1; // Highest index of any send
 
 // Structure describing a channel strip
 struct channel_strip {
@@ -194,7 +195,7 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
 #endif
 
     // Process each channel in reverse order (so that main mixbus is last)
-    uint8_t chan = MAX_CHANNELS;
+    uint8_t chan = g_lastStrip;
     while (chan--) {
         struct channel_strip* strip = g_channelStrips[chan];
         if (strip == NULL)
@@ -309,7 +310,7 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
                 }
 #else
                 // Add fx send output frames only for input channels
-                for (uint8_t send = 0; send < MAX_CHANNELS; ++send) {
+                for (uint8_t send = 0; send < g_lastSend; ++send) {
                     if (g_fxSends[send]) {
                         if (strip->sendMode[send] == 0) {
                             g_fxSends[send]->bufferA[frame] += fSampleA * strip->send[send] * g_fxSends[send]->level;
@@ -844,6 +845,8 @@ int8_t addStrip() {
         g_channelStrips[chan] = strip;
         pthread_mutex_unlock(&mutex);
         
+        if (chan > g_lastStrip)
+            g_lastStrip = chan;
         return chan;
     }
     return -1;
@@ -867,6 +870,10 @@ int8_t removeStrip(uint8_t chan) {
     jack_port_unregister(g_jackClient, pstrip->outPortA);
     jack_port_unregister(g_jackClient, pstrip->outPortB);
     free(pstrip);
+    for (uint8_t g_lastStrip = MAX_CHANNELS - 1; g_lastStrip > 0; --g_lastStrip) {
+        if (g_channelStrips[g_lastStrip])
+            break;
+    }
     return chan;
 }
 
@@ -903,6 +910,8 @@ int8_t addSend() {
             g_fxSends[send] = psend;
             ++g_sendCount;
             pthread_mutex_unlock(&mutex);
+            if (send > g_lastSend)
+                g_lastSend = send;
             return send + 1;
         }
     }
@@ -927,13 +936,14 @@ uint8_t removeSend(uint8_t send) {
     jack_port_unregister(g_jackClient, pstrip->outPortA);
     jack_port_unregister(g_jackClient, pstrip->outPortB);
     free(pstrip);
+    for (g_lastSend = MAX_CHANNELS - 1; g_lastSend > 0; --g_lastSend) {
+        if (g_fxSends[g_lastSend])
+            break;
+    }
     return 0;
 #endif
 }
 
-uint8_t getStripCount() {
-    return g_stripCount;
-}
 
 uint8_t getSendCount() {
     return g_sendCount;
