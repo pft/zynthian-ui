@@ -74,7 +74,8 @@ engine2class = {
     "PD": zynthian_engine_puredata,
     "MD": zynthian_engine_modui,
     "IR": zynthian_engine_inet_radio,
-    "AM": zynthian_engine_audio_mixer
+    "MI": zynthian_engine_audio_mixer,
+    "MR": zynthian_engine_audio_mixer,
 }
 
 # ----------------------------------------------------------------------------
@@ -144,7 +145,8 @@ class zynthian_chain_manager:
             return cls.engine_info
 
         cls.engine_info = eng_info
-        cls.engine_info["AM"] = {"ID":"0", "NAME":"Mixer_Channel_Strip", "TITLE": "Mixer Channel Strip", "TYPE": "Audio Effect", "CAT": "Other", "ENABLED": False, "INDEX": 0, "URL": "", "UI": "", "DESCR": "Audio mixer channel strip", "QUALITY": 5, "COMPLEX": 5, "EDIT": 0}
+        cls.engine_info["MI"] = {"ID":"0", "NAME":"Mixer_Channel_Strip", "TITLE": "Mixer Channel Strip", "TYPE": "Audio Effect", "CAT": "Other", "ENABLED": False, "INDEX": 0, "URL": "", "UI": "", "DESCR": "Audio mixer channel strip", "QUALITY": 5, "COMPLEX": 5, "EDIT": 0}
+        cls.engine_info["MR"] = {"ID":"1", "NAME":"Mixer_Return_Strip", "TITLE": "Mixer Effect Return Strip", "TYPE": "Audio Effect", "CAT": "Other", "ENABLED": False, "INDEX": 1, "URL": "", "UI": "", "DESCR": "Audio mixer effect return strip", "QUALITY": 5, "COMPLEX": 5, "EDIT": 0}
         # Look for an engine class for each one
         for key, info in cls.engine_info.items():
             try:
@@ -339,7 +341,7 @@ class zynthian_chain_manager:
             update_fxreturns = False
             if chain.zynmixer:
                 chain.zynmixer.zynmixer.set_mute(chain.zynmixer.mixer_chan, True) # Mute chain whilst removing
-                if chain.zynmixer.zynmixer.mixbus:
+                if chain.zynmixer.eng_code == "MR" and chain.chain_id:
                     update_fxreturns = True
 
             chain.reset()
@@ -462,6 +464,7 @@ class zynthian_chain_manager:
     def get_chain_id_by_mixer_chan(self, chan):
         """Get a chain by the mixer channel"""
 
+        #TODO: This needs refactoring
         for chain in self.chains.values():
             for slot in chain.audio_slots:
                 if slot[0].eng_code == "AM":
@@ -815,7 +818,7 @@ class zynthian_chain_manager:
             # TODO: Fails to detect MIDI only chains in snapshots
             engine = self.start_engine(processor, eng_code, eng_config)
             if engine:
-                if eng_code == "AM":
+                if eng_code in ("MI", "MR"):
                     chain.zynmixer = processor
                 #chain.rebuild_graph()
                 # Update group chains
@@ -1154,6 +1157,8 @@ class zynthian_chain_manager:
                 for slot_state in chain_state["slots"]:
                     # slot_state is a dict of proc_id:proc_type for procs in this slot
                     for index, proc_id in enumerate(slot_state):
+                        if proc_id == "0":
+                            continue # Do not replace main mixbus audio mixer processor
                         eng_code = slot_state[proc_id]
                         try:
                             eng_config = engine_config[eng_code]

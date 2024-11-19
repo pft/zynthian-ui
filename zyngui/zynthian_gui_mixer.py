@@ -959,7 +959,7 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
             strip.set_chain(chain_id)
             # strip.draw_control()
             if strip.chain.is_audio():
-                self.chan2strip[(strip.mixer_proc.zynmixer.mixbus, strip.mixer_proc.mixer_chan)] = strip
+                self.chan2strip[(strip.mixer_proc.eng_code=="MR", strip.mixer_proc.mixer_chan)] = strip
             if chain_id == self.zyngui.chain_manager.active_chain_id:
                 active_strip = strip
             strip_index += 1
@@ -971,7 +971,7 @@ class zynthian_gui_mixer(zynthian_gui_base.zynthian_gui_base):
 
         strip = self.main_mixbus_strip
         strip.set_chain(0)
-        self.chan2strip[(strip.mixer_proc.zynmixer.mixbus, strip.mixer_proc.mixer_chan)] = self.main_mixbus_strip
+        self.chan2strip[(strip.mixer_proc.eng_code=="MR", strip.mixer_proc.mixer_chan)] = self.main_mixbus_strip
         #strip.draw_control()
         return active_strip
 

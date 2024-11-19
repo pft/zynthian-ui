@@ -944,10 +944,12 @@ class zynthian_gui:
                         chain_id,
                         self.modify_chain_status["engine"]
                     )
-                    if self.chain_manager.chains[chain_id].is_audio():
-                        am_proc = self.chain_manager.add_processor(chain_id, "AM", eng_config={"mixbus": self.modify_chain_status["mixbus"]})
-                        if self.modify_chain_status['mixbus']:
+                    if self.chain_manager.chains[chain_id].synth_slots or self.modify_chain_status["audio_thru"]:
+                        if self.modify_chain_status["mixbus"]:
+                            am_proc = self.chain_manager.add_processor(chain_id, "MR")
                             self.chain_manager.chains[chain_id].set_title(am_proc.name)
+                        else:
+                            am_proc = self.chain_manager.add_processor(chain_id, "MI")
                     zynautoconnect.request_audio_connect(True)
                     zynautoconnect.request_midi_connect(True)
                     # self.modify_chain_status = {"midi_thru": False, "audio_thru": False}

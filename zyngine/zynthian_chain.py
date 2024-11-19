@@ -96,7 +96,7 @@ class zynthian_chain:
             self.audio_thru = True
         else:
             self.title = ""
-            if self.zynmixer and self.zynmixer.zynmixer.mixbus:
+            if self.zynmixer and self.zynmixer.eng_code == "MR":
                 self.audio_in = [] #TODO: Should this be fx send?
             elif self.audio_thru:
                 self.audio_in = [1, 2]
@@ -303,9 +303,9 @@ class zynthian_chain:
                     if self.synth_slots:
                         for proc in self.synth_slots[-1]:
                             sources.append(proc.get_jackname())
-                    elif self.zynmixer and self.zynmixer.zynmixer.mixbus:
+                    elif self.zynmixer and self.zynmixer.eng_code == "MR":
                         for am_slot in self.audio_slots:
-                            if am_slot[0].eng_code == "AM":
+                            if am_slot[0].eng_code in ("MI", "MR"):
                                 sources = [f"zynmixer_chan:send_{am_slot[0].mixer_chan:02d}"]
                                 break
                     elif self.audio_thru:
@@ -468,7 +468,7 @@ class zynthian_chain:
     def is_audio(self):
         """Returns True if chain is processes audio"""
 
-        return self.synth_slots or self.audio_thru
+        return self.zynmixer is not None
 
     def is_midi(self):
         """Returns True if chain processes MIDI"""
@@ -567,7 +567,7 @@ class zynthian_chain:
         """
 
         slots = self.get_slots_by_type(processor.type)
-        if len(slots) == 0 or processor.eng_code == "AM":
+        if len(slots) == 0 or processor.eng_code in ("MI", "MR"):
             slots.append([processor])
         else:
             if slot is None or slot < 0 or slot > len(slots):
@@ -575,7 +575,7 @@ class zynthian_chain:
                 slot = len(slots)
                 if processor.type == "Audio Effect":
                     for idx in range(len(slots)):
-                        if slots[idx][0].eng_code == "AM":
+                        if slots[idx][0].eng_code in ("MI", "MR"):
                             slot = idx
                             break
                 else:
@@ -622,7 +622,7 @@ class zynthian_chain:
         Returns : True on success
         """
 
-        if self.chain_id == 0 and processor.eng_code == "AM":
+        if self.chain_id == 0 and processor.eng_code == "MR":
             return False
 
         slot = self.get_slot(processor)
@@ -671,7 +671,7 @@ class zynthian_chain:
             slots = self.get_slots_by_type(processor.type)
             cur_slot = self.get_slot(processor)
             parallel = len(slots[cur_slot]) > 1
-            is_mixer_strip = processor.eng_code == "AM"
+            is_mixer_strip = processor.eng_code in ("MI", "MR")
 
             if up:
                 if is_mixer_strip:
@@ -679,13 +679,13 @@ class zynthian_chain:
                     slots.insert(cur_slot - 1, [processor])
                 elif parallel:
                     slots[cur_slot].remove(processor)
-                    if slots[cur_slot][0].eng_code == "AM":
+                    if slots[cur_slot][0].eng_code in ("MI", "MR"):
                         slots.insert(cur_slot - 1, [processor])
                     else:
                         slots.insert(cur_slot, [processor])
                 elif cur_slot > 0:
                     slots.pop(cur_slot)
-                    if slots[cur_slot - 1][0].eng_code == "AM":
+                    if slots[cur_slot - 1][0].eng_code in ("MI", "MR"):
                         slots.insert(cur_slot - 1, [processor])
                     else:
                         slots[cur_slot - 1].append(processor)
@@ -697,13 +697,13 @@ class zynthian_chain:
                     slots.insert(cur_slot + 1, [processor])
                 elif parallel:
                     slots[cur_slot].remove(processor)
-                    if slots[cur_slot + 1][0].eng_code == "AM":
+                    if slots[cur_slot + 1][0].eng_code in ("MI", "MR"):
                         slots.insert(cur_slot + 1, [processor])
                     else:
                         slots.insert(cur_slot, [processor])
                 else:
                     slots.pop(cur_slot)
-                    if slots[cur_slot][0].eng_code == "AM":
+                    if slots[cur_slot][0].eng_code in ("MI", "MR"):
                         slots.insert(cur_slot + 1, [processor])
                     else:
                         slots[cur_slot].append(processor)

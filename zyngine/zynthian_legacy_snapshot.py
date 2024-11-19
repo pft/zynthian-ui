@@ -27,8 +27,7 @@ from json import JSONDecoder
 from zyngine.zynthian_chain_manager import zynthian_chain_manager
 import logging
 
-SNAPSHOT_SCHEMA_VERSION = 1
-
+SNAPSHOT_SCHEMA_VERSION = 2
 
 class zynthian_legacy_snapshot:
 
@@ -55,12 +54,74 @@ class zynthian_legacy_snapshot:
     def convert_state(self, snapshot):
         """Converts a legacy snapshot to current version
 
-        snapshot : Legacy snapshot as dictionary
-        Returns : Current state model as dictionary
+        snapshot : Snapshot as dictionary
+        Returns : Current state model as dictionary or None if snapshot is more recent than current version
         """
 
-        if "schema_version" in snapshot:
-            return snapshot
+        if "schema_version" not in snapshot:
+            snapshot["schema_version"] = 0
+        if snapshot["schema_version"] > SNAPSHOT_SCHEMA_VERSION:
+            return None
+
+        # Iterate through each version, applying fixes to move to next version
+        for version in range(snapshot["schema_version"], SNAPSHOT_SCHEMA_VERSION):
+            logging.warning(f"Converting snapshot from schema V{version} to V{version+1}")
+            snapshot = getattr(self, f'version_{version}')(snapshot)
+
+    def version_1(self, snapshot):
+        # Convert snapshot from schema V1 to V2
+
+        mixer_map = {16: 0} # Map of AM proc id indexed by old mixer chan
+        if "chains" in snapshot:
+            # Get list of used processor ids:
+            proc_ids = []
+            for chain_config in snapshot["chains"].values():
+                if "slots" in chain_config:
+                    for slot in chain_config["slots"]:
+                        for id in slot:
+                            proc_ids.append(int(id))
+            if proc_ids:
+                proc_ids.sort()
+                next_id = proc_ids[-1] + 1
+            else:
+                next_id = 1
+
+            # Insert mixer processors in audio chains and remove mixer channel/fader refs
+            for chain_id, chain_config in snapshot["chains"].items():
+                try:
+                    mixer_chan = chain_config.pop("mixer_chan")
+                    fader_pos = chain_config.pop("fader_pos")
+                    if "slots" not in chain_config:
+                        chain_config["slots"] = []
+                    if chain_id == "0":
+                        chain_config["slots"].insert(fader_pos, {"0":"MR"})
+                    else:
+                        chain_config["slots"].insert(fader_pos, {str(next_id):"MI"})
+                        mixer_map[int(mixer_chan)] = int(next_id)
+                        next_id += 1
+                except:
+                    pass
+        #TODO: Update mixer values
+        if "zs3" in snapshot:
+            for zs3 in snapshot["zs3"].values():
+                if "mixer" in zs3:
+                    if "processors" not in zs3:
+                        zs3["processors"] = {}
+                    for chan, proc_id in mixer_map.items():
+                        key = f"chan_{chan:02d}"
+                        id = str(proc_id)
+                        if key in zs3["mixer"]:
+                            for param, val in zs3["mixer"][key].items():
+                                if proc_id not in zs3["processors"]:
+                                    zs3["processors"][id] = {}
+                                if "controllers" not in zs3["processors"][id]:
+                                    zs3["processors"][id]["controllers"] = {}
+                                zs3["processors"][id]["controllers"][param]={"value":val}
+        #TODO: Get mixer midi_learn from zs3
+        return snapshot
+
+    def version_0(self, snapshot):
+        # Convert legacy snapshots from before we started to use schema versioning
         snapshot = self.convert_old_legacy(snapshot)
         self.jackname_counters = {}
         self.aeolus_count = 0

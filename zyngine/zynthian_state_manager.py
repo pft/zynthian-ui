@@ -62,7 +62,6 @@ from zyngine.zynthian_ctrldev_manager import zynthian_ctrldev_manager
 # Zynthian State Manager Class
 # ----------------------------------------------------------------------------
 
-SNAPSHOT_SCHEMA_VERSION = 2
 capture_dir_sdc = os.environ.get(
     'ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/capture"
 ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
@@ -232,7 +231,7 @@ class zynthian_state_manager:
         zynautoconnect.start(self)
         self.jack_period = self.get_jackd_blocksize() / self.get_jackd_samplerate()
         self.chain_manager.add_chain(0)
-        self.chain_manager.add_processor(0, "AM", eng_config={"mixbus":True})
+        self.chain_manager.add_processor(0, "MR", 0, 0)
         self.reload_midi_config()
         self.create_audio_player()
         self.exit_flag = False
@@ -948,7 +947,7 @@ class zynthian_state_manager:
         self.save_zs3("zs3-0", "Last state")
         self.purge_zs3()
         state = {
-            'schema_version': SNAPSHOT_SCHEMA_VERSION,
+            'schema_version': zynthian_legacy_snapshot.SNAPSHOT_SCHEMA_VERSION,
             'last_snapshot_fpath': self.last_snapshot_fpath,
             'midi_profile_state': self.get_midi_profile_state(),
             'chains': self.chain_manager.get_state(),
@@ -1092,8 +1091,12 @@ class zynthian_state_manager:
 
         mute = self.zynmixer_bus.get_mute(0)
         try:
-            snapshot = JSONDecoder().decode(json)
-            state = self.fix_snapshot(snapshot)
+            state = JSONDecoder().decode(json)
+
+            if "schema_version" not in state or state["schema_version"] != zynthian_legacy_snapshot.SNAPSHOT_SCHEMA_VERSION:
+                self.set_busy_details("fixing legacy snapshot")
+                converter = zynthian_legacy_snapshot.zynthian_legacy_snapshot()
+                converter.convert_state(state)
             if state is None:
                 return
 
@@ -1264,25 +1267,6 @@ class zynthian_state_manager:
             self.load_snapshot(files[0])
             return True
         return False
-
-    def fix_snapshot(self, snapshot):
-        """Apply fixes to snapshot based on format version"""
-
-        if "schema_version" not in snapshot:
-            self.set_busy_details("fixing legacy snapshot")
-            converter = zynthian_legacy_snapshot.zynthian_legacy_snapshot()
-            state = converter.convert_state(snapshot)
-            # logging.debug(f"Fixed Snapshot: {state}")
-        else:
-            state = snapshot
-            if state["schema_version"] > SNAPSHOT_SCHEMA_VERSION:
-                logging.warning("Cannot load newer snapshot version")
-                return None
-            for version in range(state["schema_version"], SNAPSHOT_SCHEMA_VERSION):
-                match(version):
-                    case 1:
-                        pass
-        return state
 
     def backup_snapshot(self, path):
         """Make a backup copy of a snapshot file"""

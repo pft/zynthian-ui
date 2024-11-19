@@ -52,6 +52,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
         super().__init__(state_manager)
         self.type = "Audio Effect"
         self.name = "AudioMixer"
+        self.nickname = "MI"
         self.MAX_NUM_CHANNELS = 0
 
     def start(self):
@@ -129,8 +130,8 @@ class zynthian_engine_audio_mixer(zynthian_engine):
 
     def refresh_fx_send(self):
         send_count = self.state_manager.zynmixer_chan.get_send_count()
-        for processor in self.processors:
-            if processor.zynmixer == self.state_manager.zynmixer_bus:
+        for processor in self.state_manager.chain_manager.processors.values():
+            if processor.eng_code != "MI":
                 continue
             send = 0
             while True:
@@ -169,7 +170,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
 
     def add_processor(self, processor):
         self.processors.append(processor)
-        if processor.engine.mixbus:
+        if processor.eng_code == "MR":
             processor.zynmixer = self.state_manager.zynmixer_bus
             processor.jackname = "zynmixer_bus"
             if processor.chain_id:
@@ -202,12 +203,6 @@ class zynthian_engine_audio_mixer(zynthian_engine):
             self.state_manager.zynmixer_chan.remove_send(send)
             self.refresh_fx_send()
 
-    def set_extended_config(self, config):
-        if config is None:
-            return
-        if "mixbus" in config:
-            self.mixbus = config["mixbus"]
-
     def send_controller_value(self, zctrl):
         try:
             if zctrl.symbol.startswith("send"):
@@ -225,7 +220,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
                     zynautoconnect.solo(zctrl.processor.chain_id, zctrl.value)
                 zynautoconnect.request_audio_connect(True)
                 zynsigman.send(zynsigman.S_AUDIO_MIXER, SS_ZYNMIXER_SET_VALUE,
-                    mixbus=zctrl.processor.zynmixer.mixbus,
+                    mixbus=zctrl.processor.eng_code=="MR",
                     channel=zctrl.processor.mixer_chan,
                     symbol="solo", value=zctrl.value)
             else:
@@ -237,7 +232,7 @@ class zynthian_engine_audio_mixer(zynthian_engine):
     def get_path(self, processor):
         return processor.name
         if processor.chain_id:
-            if processor.mixbus:
+            if processor.eng_code == "MR":
                 return f"FX Send {processor.chain_id}"
             else:
                 return f"Mixer Channel {processor.chain_id}"

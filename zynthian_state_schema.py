@@ -2,7 +2,7 @@
 # ******************************************************************************
 # ZYNTHIAN PROJECT: Zynthian State Model Schema
 #
-# Copyright (C) 2022-2023 Fernando Moyano <jofemodo@zynthian.org>
+# Copyright (C) 2022-2024 Fernando Moyano <jofemodo@zynthian.org>
 #                    Brian Walton <riban@zynthian.org>
 #
 # ******************************************************************************
@@ -22,7 +22,7 @@
 # ******************************************************************************
 
 ZynthianState = {
-    "schema_version": 1,  # Version of state (snapshot) model
+    "schema_version": 2,  # Version of state (snapshot) model
     # Full path and filename of last loaded snapshot
     "last_snapshot_fpath": "/zynthian/zynthian-my-data/snapshots/000/My Snapshot 1.zss",
     "midi_profile_state": {  # MIDI Profile TODO: Document midi profile
@@ -56,7 +56,6 @@ ZynthianState = {
     "chains": {  # Dictionary of chains indexed by chain ID
         "1": {  # Chain 1
             "title": "My first chain",  # Chain title (optional)
-            "mixer_chan": 0,  # Chain audio mixer channel (may be None)
             "midi_chan": 0,  # Chain MIDI channel (may be None)
             # Index of the processor last selected within chain (Should this go in GUI section?)
             "current_processor": 0,
@@ -67,8 +66,6 @@ ZynthianState = {
                 },
                 # ... More slots
             ],
-            # Index of slot where fader is (divides pre/post fader audio effects)
-            "fader_pos": 1
         }
     },
     "zs3": {  # Dictionary of ZS3's indexed by chan/prog or ZS3-x
@@ -91,21 +88,21 @@ ZynthianState = {
                 }
                 # ... Other processors
             },
-            "mixer": {  # Dictionary of audio mixer configuration (optional, overrides base value)
-                "chan_00": {  # Indexed by mixer channel / strip (or "main")
-                    # Fader value (optional, overrides base value)
-                    "level": 0.800000011920929,
-                    # Balance/pan state (optional, overrides base value)
-                    "balance": 0.5,
-                    # Mute state (optional bitwise flag, overrides base value) b0:state, b1:momentary
-                    "mute": 0,
-                    # Solo state (optional bitwise flag, overrides base value) b0:state, b1:momentary
-                    "solo": 0,
-                    # Mono state (optional bitwise flag, overrides base value) b0:state, b1:momentary
-                    "mono": 0,
-                    # Phase reverse state (optional bitwise flag, overrides base value) b0:state, b1:momentary
-                    "phase": 0,
-                },
+--            "mixer": {  # Dictionary of audio mixer configuration (optional, overrides base value)
+--                "chan_00": {  # Indexed by mixer channel / strip (or "main")
+--                    # Fader value (optional, overrides base value)
+--                    "level": 0.800000011920929,
+--                    # Balance/pan state (optional, overrides base value)
+--                    "balance": 0.5,
+--                    # Mute state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+--                    "mute": 0,
+--                    # Solo state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+--                    "solo": 0,
+--                    # Mono state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+--                    "mono": 0,
+--                    # Phase reverse state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+--                    "phase": 0,
+--                },
                 # ... Other mixer strips
                 "midi_learn": {  # Mixer MIDI learn
                     # graph_path [strip index, param symbol] mapped by "midi chan, midi cc"
@@ -178,8 +175,8 @@ ZynthianState = {
         "PT": None,  # Pianoteq configuration
         # ... Other engines
     },
-    # List of audio mixer strip indicies armed for multi-track audio recording
-    "audio_recorder_armed": [0, 3],
+--    # List of audio mixer strip indicies armed for multi-track audio recording
+--    "audio_recorder_armed": [0, 3],
     # Binary encoded RIFF data for step sequencer patterns, sequences, etc.
     "zynseq_riff_b64": "dmVycwAA...",
     "alsa_mixer": {  # Indexed by processor ID

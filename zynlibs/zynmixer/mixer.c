@@ -240,7 +240,7 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
             pInB = jack_port_get_buffer(strip->inPortB, frames);
 
             if (strip->outRouted) {
-                // Direct output so create audio buffers
+                // Direct output so prepare output audio buffers
                 pChanOutA = jack_port_get_buffer(strip->outPortA, frames);
                 pChanOutB = jack_port_get_buffer(strip->outPortB, frames);
                 memset(pChanOutA, 0.0, frames * sizeof(jack_default_audio_sample_t));
@@ -376,6 +376,7 @@ static int onJackProcess(jack_nframes_t frames, void* args) {
 }
 
 void onJackConnect(jack_port_id_t source, jack_port_id_t dest, int connect, void* args) {
+    pthread_mutex_lock(&mutex);
     for (uint8_t chan = 0; chan < MAX_CHANNELS; chan++) {
         if (g_channelStrips[chan] == NULL)
             continue;
@@ -388,6 +389,7 @@ void onJackConnect(jack_port_id_t source, jack_port_id_t dest, int connect, void
         else
             g_channelStrips[chan]->outRouted = 0;
     }
+    pthread_mutex_unlock(&mutex);
 }
 
 int onJackSamplerate(jack_nframes_t nSamplerate, void* arg) {
@@ -687,6 +689,7 @@ void setMS(uint8_t channel, uint8_t enable) {
         return;
     g_channelStrips[channel]->ms = enable != 0;
     sprintf(g_oscpath, "/mixer/channel/%d/ms", channel);
+    sendOscInt(g_oscpath, enable);
 }
 
 uint8_t getMS(uint8_t channel) {
