@@ -568,7 +568,7 @@ class ZynMixer():
 
     def normalise(self, channel, enable):
         """
-        Sets the internal normalisation to strip 0 of a mixer strip
+        Sets the internal normalisation to strip 0 of a mixer strip (only on buses)
 
         Parameters
         ----------

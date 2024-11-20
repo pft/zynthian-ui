@@ -231,7 +231,7 @@ class zynthian_state_manager:
         zynautoconnect.start(self)
         self.jack_period = self.get_jackd_blocksize() / self.get_jackd_samplerate()
         self.chain_manager.add_chain(0)
-        self.chain_manager.add_processor(0, "MR", 0, 0)
+        self.chain_manager.add_processor(0, "MR", 0, 255)
         self.reload_midi_config()
         self.create_audio_player()
         self.exit_flag = False

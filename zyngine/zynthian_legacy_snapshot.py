@@ -71,7 +71,7 @@ class zynthian_legacy_snapshot:
     def version_1(self, snapshot):
         # Convert snapshot from schema V1 to V2
 
-        mixer_map = {16: 0} # Map of AM proc id indexed by old mixer chan
+        mixer_map = {16: 255} # Map of AM proc id indexed by old mixer chan
         if "chains" in snapshot:
             # Get list of used processor ids:
             proc_ids = []
@@ -94,7 +94,7 @@ class zynthian_legacy_snapshot:
                     if "slots" not in chain_config:
                         chain_config["slots"] = []
                     if chain_id == "0":
-                        chain_config["slots"].insert(fader_pos, {"0":"MR"})
+                        chain_config["slots"].insert(fader_pos, {"255":"MR"})
                     else:
                         chain_config["slots"].insert(fader_pos, {str(next_id):"MI"})
                         mixer_map[int(mixer_chan)] = int(next_id)

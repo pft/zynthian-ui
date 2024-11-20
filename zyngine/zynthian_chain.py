@@ -97,9 +97,9 @@ class zynthian_chain:
         else:
             self.title = ""
             if self.zynmixer and self.zynmixer.eng_code == "MR":
-                self.audio_in = [] #TODO: Should this be fx send?
+                self.audio_in = [] # We don't want any direct audio input connections to buses
             elif self.audio_thru:
-                self.audio_in = [1, 2]
+                self.audio_in = [1, 2] # Default is to route first 2 audio inputs to audio chains
             self.audio_out = [0]
 
         if self.is_midi():
@@ -112,7 +112,6 @@ class zynthian_chain:
             self.current_processor = self.audio_slots[0][0]
         except:
             self.current_processor = None
-        self.remove_all_processors()
         self.rebuild_graph()
 
     def get_slots_by_type(self, type):
@@ -658,13 +657,6 @@ class zynthian_chain:
 
         # del processor => I don't think this is needed nor right?? (Jofemodo)
         return True
-
-    def remove_all_processors(self):
-        """Remove all processors from chain
-        """
-
-        for processor in self.get_processors():
-            self.remove_processor(processor)
 
     def nudge_processor(self, processor, up):
         try:

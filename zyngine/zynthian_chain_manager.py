@@ -344,6 +344,8 @@ class zynthian_chain_manager:
                 if chain.zynmixer.eng_code == "MR" and chain.chain_id:
                     update_fxreturns = True
 
+            for processor in chain.get_processors():
+                self.remove_processor(chain_id, processor, False)
             chain.reset()
             if chain_id != 0:
                 if chain.is_audio():
@@ -767,14 +769,14 @@ class zynthian_chain_manager:
         """Get the next available processor ID"""
 
         proc_ids = list(self.processors)
-        if proc_ids:
-            proc_ids.sort()
-            for x, y in enumerate(proc_ids):
-                if proc_ids[x-1] + 1 < y:
-                    return proc_ids[x-1]+1
-            return proc_ids[-1] + 1
-        else:
-            return 1
+        proc_ids.sort()
+        id = 0
+        for i in proc_ids:
+            if i == id:
+                id += 1
+            else:
+                break
+        return id
 
     def add_processor(self, chain_id, eng_code, slot=None, proc_id=None, eng_config=None):
         """Add a processor to a chain
