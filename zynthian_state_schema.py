@@ -88,26 +88,26 @@ ZynthianState = {
                 }
                 # ... Other processors
             },
---            "mixer": {  # Dictionary of audio mixer configuration (optional, overrides base value)
---                "chan_00": {  # Indexed by mixer channel / strip (or "main")
---                    # Fader value (optional, overrides base value)
---                    "level": 0.800000011920929,
---                    # Balance/pan state (optional, overrides base value)
---                    "balance": 0.5,
---                    # Mute state (optional bitwise flag, overrides base value) b0:state, b1:momentary
---                    "mute": 0,
---                    # Solo state (optional bitwise flag, overrides base value) b0:state, b1:momentary
---                    "solo": 0,
---                    # Mono state (optional bitwise flag, overrides base value) b0:state, b1:momentary
---                    "mono": 0,
---                    # Phase reverse state (optional bitwise flag, overrides base value) b0:state, b1:momentary
---                    "phase": 0,
---                },
+            "mixer": {  # Dictionary of audio mixer configuration (optional, overrides base value)
+                "chan_00": {  # Indexed by mixer channel / strip (or "main")
+                    # Fader value (optional, overrides base value)
+                    "level": 0.800000011920929,
+                    # Balance/pan state (optional, overrides base value)
+                    "balance": 0.5,
+                    # Mute state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+                    "mute": 0,
+                    # Solo state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+                    "solo": 0,
+                    # Mono state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+                    "mono": 0,
+                    # Phase reverse state (optional bitwise flag, overrides base value) b0:state, b1:momentary
+                    "phase": 0,
+                },
                 # ... Other mixer strips
-                "midi_learn": {  # Mixer MIDI learn
-                    # graph_path [strip index, param symbol] mapped by "midi chan, midi cc"
-                    "chan,cc": "graph_path",
-                    # ... Other MIDI learn configs
+--                "midi_learn": {  # Mixer MIDI learn
+--                    # graph_path [strip index, param symbol] mapped by "midi chan, midi cc"
+--                    "chan,cc": "graph_path",
+--                    # ... Other MIDI learn configs
                 }
             },
             "chains": {  # Dictionary of chain specific ZS3 config indexed by chain ID

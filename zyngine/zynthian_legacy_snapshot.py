@@ -71,7 +71,7 @@ class zynthian_legacy_snapshot:
     def version_1(self, snapshot):
         # Convert snapshot from schema V1 to V2
 
-        mixer_map = {16: 255} # Map of AM proc id indexed by old mixer chan
+        mixer_map = {16: 255} # Map of "MI" mixer proc id indexed by old mixer chan
         if "chains" in snapshot:
             # Get list of used processor ids:
             proc_ids = []
@@ -105,6 +105,10 @@ class zynthian_legacy_snapshot:
         if "zs3" in snapshot:
             for zs3 in snapshot["zs3"].values():
                 if "mixer" in zs3:
+                    if "chains" not in zs3:
+                        zs3["chains"] = {}
+                    if "midi_cc" not in zs3:
+                        zs3["midi_cc"] = {}
                     if "processors" not in zs3:
                         zs3["processors"] = {}
                     for chan, proc_id in mixer_map.items():
@@ -117,6 +121,18 @@ class zynthian_legacy_snapshot:
                                 if "controllers" not in zs3["processors"][id]:
                                     zs3["processors"][id]["controllers"] = {}
                                 zs3["processors"][id]["controllers"][param]={"value":val}
+                    if "midi_learn" in zs3["mixer"]:
+                        for key, conf in zs3["mixer"]["midi_learn"].items():
+                            chan,cc = key.split(",")
+                            strip_id = conf[0]
+                            proc_id = mixer_map[int(strip_id)]
+                            param = conf[1]
+                            if chan not in zs3["midi_cc"]:
+                                zs3["midi_cc"][chan] = {}
+                            if cc not in zs3["midi_cc"][chan]:
+                                zs3["midi_cc"][chan][cc] = []
+                            zs3["midi_cc"][chan][cc].append([proc_id, param])
+                            #TODO: For chain based MIDI binding: within zs3: "chains"{"chain_id":{"midi_cc"{chan:{cc:[[proc_id,symbol],...]}} 
         #TODO: Get mixer midi_learn from zs3
         return snapshot
 
