@@ -72,53 +72,70 @@ class zynthian_ctrldev_manager():
                         f"Ctrldev driver '{class_name}' for devices with ID '{dev_id}'")
                     self.available_drivers[dev_id] = dev_class
 
-    def load_driver(self, izmip, enable=False):
+    def load_driver(self, izmip, force=False):
         """Loads a device driver
 
         izmip : Index of zmip to attach driver
-        enable : Enable driver for this input
+        force : Enable driver ignoring autoload_flag / disabled list
         returns : True if new driver loaded
         """
 
+        # Check if driver does exist
         dev_id = zynautoconnect.get_midi_in_devid(izmip)
         if dev_id not in self.available_drivers:
             return False
+        # If force => remove driver from disabled list
         uid = zynautoconnect.get_midi_in_uid(izmip)
         autoload_flag = self.available_drivers[dev_id].get_autoload_flag()
-        if uid in self.disabled_devices and (enable or autoload_flag):
-            self.disabled_devices.remove(uid)
-        elif uid not in self.disabled_devices and not (enable and autoload_flag):
-            self.disabled_devices.append(uid)
-        if izmip in self.drivers or uid in self.disabled_devices:
-            return False  # TODO: Should check if driver differs
-        izmop = zynautoconnect.dev_in_2_dev_out(izmip)
-        try:
-            # Load driver
-            self.drivers[izmip] = self.available_drivers[dev_id](
-                self.state_manager, izmip, izmop)
-            # Unroute from chains if driver want it
-            if self.drivers[izmip].unroute_from_chains:
-                lib_zyncore.zmip_set_route_chains(izmip, 0)
-            # Initialize the driver after creating the instance, so MIDI answer messages can be processed
-            self.drivers[izmip].init()
-            logging.info(f"Loaded ctrldev driver {dev_id}.")
-            return True
-        except Exception as e:
-            logging.error(f"Can't load ctrldev driver {dev_id} => {e}")
+        if uid in self.disabled_devices:
+            if force:
+                self.disabled_devices.remove(uid)
+        # if not force nor autoload flag, add driver to disabled list
+        else:
+            if not (force or autoload_flag):
+                self.disabled_devices.append(uid)
+
+        # If driver already loaded ...
+        # TODO: Should check if driver differs?
+        if izmip in self.drivers:
+            # Unload driver if it's in disabled list
+            if uid in self.disabled_devices:
+                self.unload_driver(izmip)
             return False
+
+        # If driver is not loaded ...
+        else:
+            # Don't load if it's in disabled list
+            if uid in self.disabled_devices:
+                return False
+            izmop = zynautoconnect.dev_in_2_dev_out(izmip)
+            try:
+                # Load driver
+                self.drivers[izmip] = self.available_drivers[dev_id](self.state_manager, izmip, izmop)
+                # Unroute from chains if driver want it
+                if self.drivers[izmip].unroute_from_chains:
+                    lib_zyncore.zmip_set_route_chains(izmip, 0)
+                # Initialize the driver after creating the instance, so MIDI answer messages can be processed
+                self.drivers[izmip].init()
+                logging.info(f"Loaded ctrldev driver {dev_id}.")
+                return True
+            except Exception as e:
+                logging.error(f"Can't load ctrldev driver {dev_id} => {e}")
+                return False
 
     def unload_driver(self, izmip, disable=False):
         """Unloads a device driver
 
         izmip : Index of zmip to detach driver
-        disable : True to disable device from loading driver (Default: False)
+        disable : True to disable driver for this device (Default: False)
         returns : True if existing driver detached
         """
 
-        if disable and zynautoconnect.get_midi_in_devid(izmip) in self.available_drivers:
-            uid = zynautoconnect.get_midi_in_uid(izmip)
-            if uid is not None and uid not in self.disabled_devices:
-                self.disabled_devices.append(uid)
+        # Check if driver does exist and must be added to disabled list
+        dev_id = zynautoconnect.get_midi_in_devid(izmip)
+        if disable and dev_id in self.available_drivers and self.available_drivers[dev_id].get_autoload_flag():
+            self.set_disabled_driver(zynautoconnect.get_midi_in_uid(izmip), True)
+        # If driver is loaded, unload it!
         if izmip in self.drivers:
             # Restore route to chains
             if self.drivers[izmip].unroute_from_chains:
@@ -126,6 +143,7 @@ class zynthian_ctrldev_manager():
             # Unload driver
             self.drivers[izmip].end()
             self.drivers.pop(izmip)
+            logging.info(f"Unloaded ctrldev driver {dev_id}.")
             return True
 
         return False
@@ -133,6 +151,18 @@ class zynthian_ctrldev_manager():
     def unload_all_drivers(self):
         for izmip in list(self.drivers):
             self.unload_driver(izmip)
+
+    def set_disabled_driver(self, uid, disable_state):
+        if uid is not None:
+            if uid not in self.disabled_devices:
+                if disable_state:
+                    self.disabled_devices.append(uid)
+            else:
+                if not disable_state:
+                    self.disabled_devices.remove(uid)
+
+    def get_disabled_driver(self, uid):
+        return uid in self.disabled_devices
 
     def is_input_device_available_to_chains(self, idev):
         if idev in self.drivers and self.drivers[idev].unroute_from_chains:

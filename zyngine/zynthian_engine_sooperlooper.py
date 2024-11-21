@@ -354,7 +354,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 			['substitute', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 106],
 			['insert', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 107],
 			['undo/redo', {'value': 1, 'labels': ['<', '<>', '>']}],
-			['prev/next', {'value': 1, 'labels': ['<', '<>', '>']}],
+			['prev/next', {'value': 63, 'value_max': 127, 'labels': ['<', '<>', '>']}],
 			['trigger', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 108],
 			['mute', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 109],
 			['oneshot', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 110],
@@ -391,7 +391,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 			['Loop record 2', ['replace', 'substitute', 'insert', 'undo/redo']],
 			['Loop control', ['trigger', 'oneshot', 'mute', 'pause']],
 			['Loop time/pitch', ['reverse', 'rate', 'stretch_ratio', 'pitch_shift']],
-			['Loop levels', ['wet', 'dry', 'feedback']],
+			['Loop levels', ['wet', 'dry', 'feedback', 'selected_loop_num']],
 			['Global loop', ['selected_loop_num', 'loop_count', 'prev/next', 'single_pedal']],
 			['Global levels', ['rec_thresh', 'input_gain']],
 			['Global quantize', ['quantize', 'mute_quantized', 'overdub_quantized', 'replace_quantized']],
@@ -590,6 +590,8 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 				if pedal_dur > 1.5:
 					if self.pedal_taps:
 						self.osc_server.send(self.osc_target, '/sl/-3/hit', ('s', 'undo_all'))
+		elif zctrl.symbol == 'selected_loop_num':
+			self.select_loop(zctrl.value - 1, True)
 		elif zctrl.symbol in self.SL_LOOP_PARAMS:  # Selected loop
 			self.osc_server.send(self.osc_target, '/sl/-3/set', ('s', zctrl.symbol), ('f', zctrl.value))
 		elif zctrl.symbol in self.SL_LOOP_GLOBAL_PARAMS:  # All loops
@@ -615,13 +617,11 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 			zctrl.set_value(1, False)
 		elif zctrl.symbol == 'prev/next':
 			# Use single controller to perform prev(CCW) and next (CW)
-			if zctrl.value == 0:
+			if zctrl.value  < 63:
 				self.select_loop(self.selected_loop - 1, True)
-			elif zctrl.value == 2:
+			elif zctrl.value  > 63:
 				self.select_loop(self.selected_loop + 1, True)
-			zctrl.set_value(1, False)
-		elif zctrl.symbol == 'selected_loop_num':
-			self.select_loop(zctrl.value - 1, True)
+			zctrl.set_value(63, False)
 		elif zctrl.symbol == 'loop_count':
 			for loop in range(self.loop_count, zctrl.value):
 				self.osc_server.send(self.osc_target, '/loop_add', ('i', self.channels), ('f', 30), ('i', 0))
@@ -770,7 +770,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 		#self.processors[0].status = self.SL_STATES[self.state]['icon']
 
 	def select_loop(self, loop, send=False):
-		if loop < 0 or loop >= self.MAX_LOOPS:
+		if loop < 0 or loop >= self.loop_count:
 			return  # TODO: Handle -1 == all loops
 		self.selected_loop = int(loop)
 		self.monitors_dict['state'] = self.state[self.selected_loop]

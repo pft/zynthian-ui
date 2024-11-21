@@ -29,17 +29,43 @@
 
  <h1>Audio Mixer</h1>
 
- <p>The audio mixer is the zynthian UI's main view. You can always access
- the mixer by pushing the MIX button.</p>
+ <p>The audio mixer is the zynthian UI's "home" view. You can always access
+  the mixer by pushing the MIX button.</p>
+ <p>It's composed of vertical strips associated with chains. Initially it will be empty, showing the main strip alone.
+  For each chain you create, a new strip is added to the mixer. There can be more mixer strips than can be displayed.
+  They will scroll left / right if you select a strip that is off screen.</p>
+ <p>Each strip is an interactive widget that can be manipulated in several ways and it shows status info about the
+  associated chain.<p>
 
- <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
- eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
- ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
- aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit
- in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
- Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
- officia deserunt mollit anim id est laborum.</p>
+ <p>From top to bottom:</p>
+
+ <div class="left_float_container">
+  <img src="img/mixer_strip_legend_bg_black.png" class="full">
+ </div>
+
+ <ul>
+  <li><b>Solo:</b> Solo flag. Push to toggle. This is a non-exclusive solo mode. When a chain has solo enabled, all
+   other chains without solo enabled will be muted, allowing auditioning of one or more chains. The <i>main</i> solo
+   will disable all chain solos.</li>
+  <li><b>Mute:</b> Mute flag. Push to toggle. When a chain is muted ("mute" enabled), it will remain silent.</li>
+  <li><b>Fader:</b> Mixing volume for the associated chain. Rotate knob #1 or drag up & down to modify the fader level.
+   On the touchscreen you can drag multiple faders at once. Tap it to set the active chain.</li>
+  <li><b>DPM:</b> Digital Peak Meter for the associated chain, covering the range from -50dBFS to 0dBFS. </li>
+  <li><b>Description:</b> A vertically oriented text describing the chain. By default, for a synth chain it will show
+   synth processor and preset name. If you give a name to the chain, this will be included in the description too.</li>
+  <li><b>Balance/Pan:</b> Mixing right/left balance (or pan of a mono signal) for the associated chain. Rotate knob#2
+   or drag left & right on the fader to modify.</li>
+  <li><b>Legend:</b> It shows an icon for the chain's type and a number for the assigned MIDI channel. Tap it to access
+   the chain's control view.</li>
+ </ul>
+
+ <div class="clear"></div>
+
+ &nbsp;<br>
+ &nbsp;<br>
+ &nbsp;<br>
+ &nbsp;<br>
+ &nbsp;<br>
 
  </body>
 </html>
-

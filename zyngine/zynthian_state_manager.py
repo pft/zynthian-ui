@@ -1802,20 +1802,18 @@ class zynthian_state_manager:
         for idev in range(NUM_MIDI_DEVS_IN):
             if zynautoconnect.devices_in[idev] is None:
                 continue
-
-            routed_chains = []
-            for ch in range(MAX_NUM_ZMOPS):
-                if lib_zyncore.zmop_get_route_from(ch, idev):
-                    routed_chains.append(ch)
-
             try:
                 uid = zynautoconnect.devices_in[idev].aliases[0]
             except:
                 logging.error(f"No aliases for idev {idev} => Skipping!")
                 continue
+            routed_chains = []
+            for ch in range(MAX_NUM_ZMOPS):
+                if lib_zyncore.zmop_get_route_from(ch, idev):
+                    routed_chains.append(ch)
             mcstate[uid] = {
                 "zmip_input_mode": bool(lib_zyncore.zmip_get_flag_active_chain(idev)),
-                "disable_ctrldev": uid in self.ctrldev_manager.disabled_devices,
+                "disable_ctrldev": self.ctrldev_manager.get_disabled_driver(uid),
                 "routed_chains": routed_chains
             }
             # Ctrldev driver state
@@ -1832,8 +1830,7 @@ class zynthian_state_manager:
                         mcstate[uid]["midi_cc"] = {}
                     mcstate[uid]["midi_cc"][chan_cc] = []
                     for zctrl in zctrls:
-                        mcstate[uid]["midi_cc"][chan_cc].append(
-                            [zctrl.processor.id, zctrl.symbol])
+                        mcstate[uid]["midi_cc"][chan_cc].append([zctrl.processor.id, zctrl.symbol])
 
         return mcstate
 
@@ -1845,13 +1842,12 @@ class zynthian_state_manager:
         if mcstate:
             ctrldev_state_drivers = {}
             for uid, state in mcstate.items():
-                zmip = zynautoconnect.get_midi_in_devid_by_uid(
-                    uid, zynthian_gui_config.midi_usb_by_port)
+                #logging.debug(f"MCSTATE {uid} => {state}")
+                zmip = zynautoconnect.get_midi_in_devid_by_uid(uid, zynthian_gui_config.midi_usb_by_port)
                 if zmip is None:
                     continue
                 try:
-                    lib_zyncore.zmip_set_flag_active_chain(
-                        zmip, bool(state["zmip_input_mode"]))
+                    lib_zyncore.zmip_set_flag_active_chain(zmip, bool(state["zmip_input_mode"]))
                 except:
                     pass
                 try:
@@ -1860,10 +1856,8 @@ class zynthian_state_manager:
                     pass
                 zynautoconnect.update_midi_in_dev_mode(zmip)
                 try:
-                    if state["disable_ctrldev"]:
-                        self.ctrldev_manager.unload_driver(zmip, True)
-                    else:
-                        self.ctrldev_manager.load_driver(zmip, True)
+                    self.ctrldev_manager.set_disabled_driver(uid, state["disable_ctrldev"])
+                    self.ctrldev_manager.load_driver(zmip)
                 except:
                     pass
                 try:
@@ -1874,8 +1868,7 @@ class zynthian_state_manager:
                 try:
                     routed_chains = state["routed_chains"]
                     for ch in range(0, 16):
-                        lib_zyncore.zmop_set_route_from(
-                            ch, zmip, ch in routed_chains)
+                        lib_zyncore.zmop_set_route_from(ch, zmip, ch in routed_chains)
                 except:
                     pass
 
@@ -1887,8 +1880,7 @@ class zynthian_state_manager:
                                 chan_cc = int(chan_cc)
                                 chan = (chan_cc >> 8) & 0x7f
                                 cc = chan_cc & 0x7f
-                                self.chain_manager.add_midi_learn(
-                                    chan, cc, processor.controllers_dict[symbol], zmip)
+                                self.chain_manager.add_midi_learn(chan, cc, processor.controllers_dict[symbol], zmip)
 
             self.ctrldev_manager.set_state_drivers(ctrldev_state_drivers)
 

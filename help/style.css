@@ -7,14 +7,29 @@ body {
 
 h1 {
 	color: #ffffff;
-	font-size: 200%;
+	font-size: 180%;
+}
+
+ul {
+	margin-left: 0.3em;
+	padding-left: 0px;
+}
+li {
+	margin-left: 0px;
+	padding-left: 0.5em;
 }
 
 img.full {
 	width: 100%;
 }
 
-div.knobs_action_container {
+div.clear {
+	clear: both;
+}
+
+div.knobs_action_container,
+div.left_float_container {
+	clear: both;
 	float: right;
 	width: 30%;
 }

@@ -125,29 +125,22 @@ class zynthian_gui_midi_config(zynthian_gui_selector):
                 port = zynautoconnect.devices_in[idev]
                 mode = get_mode_str(idev)
                 if self.chain is None:
-                    self.list_data.append(
-                        (port.aliases[0], idev, f"{mode}{port.aliases[1]}"))
+                    self.list_data.append((port.aliases[0], idev, f"{mode}{port.aliases[1]}"))
                 elif not self.zyngui.state_manager.ctrldev_manager.is_input_device_available_to_chains(idev):
-                    self.list_data.append(
-                        (port.aliases[0], idev, f"    {mode}{port.aliases[1]}"))
+                    self.list_data.append((port.aliases[0], idev, f"    {mode}{port.aliases[1]}"))
                 else:
                     if lib_zyncore.zmop_get_route_from(self.chain.zmop_index, idev):
-                        self.list_data.append(
-                            (port.aliases[0], idev, f"\u2612 {mode}{port.aliases[1]}"))
+                        self.list_data.append((port.aliases[0], idev, f"\u2612 {mode}{port.aliases[1]}"))
                     else:
-                        self.list_data.append(
-                            (port.aliases[0], idev, f"\u2610 {mode}{port.aliases[1]}"))
+                        self.list_data.append((port.aliases[0], idev, f"\u2610 {mode}{port.aliases[1]}"))
             else:
                 port = zynautoconnect.devices_out[idev]
                 if self.chain is None:
-                    self.list_data.append(
-                        (port.aliases[0], idev, f"{port.aliases[1]}"))
+                    self.list_data.append((port.aliases[0], idev, f"{port.aliases[1]}"))
                 elif port.aliases[0] in self.chain.midi_out:
-                    self.list_data.append(
-                        (port.aliases[0], idev, f"\u2612 {port.aliases[1]}"))
+                    self.list_data.append((port.aliases[0], idev, f"\u2612 {port.aliases[1]}"))
                 else:
-                    self.list_data.append(
-                        (port.aliases[0], idev, f"\u2610 {port.aliases[1]}"))
+                    self.list_data.append((port.aliases[0], idev, f"\u2610 {port.aliases[1]}"))
 
         def append_service_device(dev_name, obj):
             """Add service (that is also a port) to list"""
@@ -158,11 +151,9 @@ class zynthian_gui_midi_config(zynthian_gui_selector):
                     port = zynautoconnect.devices_out[obj]
                 if port:
                     mode = get_mode_str(obj)
-                    self.list_data.append(
-                        (f"stop_{dev_name}", obj, f"\u2612 {mode}{port.aliases[1]}"))
+                    self.list_data.append((f"stop_{dev_name}", obj, f"\u2612 {mode}{port.aliases[1]}"))
             else:
-                self.list_data.append(
-                    (f"start_{dev_name}", None, f"\u2610 {obj}"))
+                self.list_data.append((f"start_{dev_name}", None, f"\u2610 {obj}"))
 
         def atoi(text):
             return int(text) if text.isdigit() else text
@@ -208,8 +199,7 @@ class zynthian_gui_midi_config(zynthian_gui_selector):
                     if aubio_devices:
                         append_service_device("aubionotes", aubio_devices[0])
                     else:
-                        append_service_device(
-                            "aubionotes", "Aubionotes (Audio \u2794 MIDI)")
+                        append_service_device("aubionotes", "Aubionotes (Audio \u2794 MIDI)")
 
         # Remove "Internal Devices" title if section is empty
         if len(self.list_data) == nint:
@@ -224,13 +214,11 @@ class zynthian_gui_midi_config(zynthian_gui_selector):
             self.list_data.append((None, None, "Bluetooth Devices"))
             if zynthian_gui_config.bluetooth_enabled:
                 if self.chain is None:
-                    self.list_data.append(
-                        ("stop_bluetooth", None, "\u2612 BLE MIDI"))
+                    self.list_data.append(("stop_bluetooth", None, "\u2612 BLE MIDI"))
                 for x in sorted(ble_devices, key=natural_keys):
                     append_port(x[1])
             elif self.chain is None:
-                self.list_data.append(
-                    ("start_bluetooth", None, "\u2610 BLE MIDI"))
+                self.list_data.append(("start_bluetooth", None, "\u2610 BLE MIDI"))
 
         if not self.chain or net_devices:
             self.list_data.append((None, None, "Network Devices"))
@@ -240,42 +228,33 @@ class zynthian_gui_midi_config(zynthian_gui_selector):
             else:
                 if os.path.isfile("/usr/local/bin/jacknetumpd"):
                     if "jacknetumpd:netump_in" in net_devices:
-                        append_service_device(
-                            "jacknetumpd", net_devices["jacknetumpd:netump_in"])
+                        append_service_device("jacknetumpd", net_devices["jacknetumpd:netump_in"])
                     elif "jacknetumpd:netump_out" in net_devices:
-                        append_service_device(
-                            "jacknetumpd", net_devices["jacknetumpd:netump_out"])
+                        append_service_device("jacknetumpd", net_devices["jacknetumpd:netump_out"])
                     else:
-                        append_service_device(
-                            "jacknetumpd", "NetUMP: MIDI 2.0")
+                        append_service_device("jacknetumpd", "NetUMP: MIDI 2.0")
 
                 if os.path.isfile("/usr/local/bin/jackrtpmidid"):
                     if "jackrtpmidid:rtpmidi_in" in net_devices:
-                        append_service_device(
-                            "jackrtpmidid", net_devices["jackrtpmidid:rtpmidi_in"])
+                        append_service_device("jackrtpmidid", net_devices["jackrtpmidid:rtpmidi_in"])
                     elif "jackrtpmidid:rtpmidi_out" in net_devices:
-                        append_service_device(
-                            "jackrtpmidid", net_devices["jackrtpmidid:rtpmidi_out"])
+                        append_service_device("jackrtpmidid", net_devices["jackrtpmidid:rtpmidi_out"])
                     else:
                         append_service_device("jackrtpmidid", "RTP-MIDI")
 
                 if os.path.isfile("/usr/local/bin/qmidinet"):
                     if "QmidiNet:in_1" in net_devices:
-                        append_service_device(
-                            "QmidiNet", net_devices["QmidiNet:in_1"])
+                        append_service_device("QmidiNet", net_devices["QmidiNet:in_1"])
                     elif "QmidiNet:out_1" in net_devices:
-                        append_service_device(
-                            "QmidiNet", net_devices["QmidiNet:out_1"])
+                        append_service_device("QmidiNet", net_devices["QmidiNet:out_1"])
                     else:
                         append_service_device("QmidiNet", "QmidiNet")
 
                 if os.path.isfile("/zynthian/venv/bin/touchosc2midi"):
                     if "RtMidiIn Client:TouchOSC Bridge" in net_devices:
-                        append_service_device(
-                            "touchosc", net_devices["RtMidiIn Client:TouchOSC Bridge"])
+                        append_service_device("touchosc", net_devices["RtMidiIn Client:TouchOSC Bridge"])
                     elif "RtMidiOut Client:TouchOSC Bridge" in net_devices:
-                        append_service_device(
-                            "touchosc", net_devices["RtMidiOut Client:TouchOSC Bridge"])
+                        append_service_device("touchosc", net_devices["RtMidiOut Client:TouchOSC Bridge"])
                     else:
                         append_service_device("touchosc", "TouchOSC Bridge")
 
@@ -389,11 +368,9 @@ class zynthian_gui_midi_config(zynthian_gui_selector):
             elif option.startswith("Reset name"):
                 zynautoconnect.set_port_friendly_name(params)
             elif params == "LOAD_DRIVER":
-                self.zyngui.state_manager.ctrldev_manager.load_driver(
-                    self.list_data[self.index][1], True)
+                self.zyngui.state_manager.ctrldev_manager.load_driver(self.list_data[self.index][1], True)
             elif params == "UNLOAD_DRIVER":
-                self.zyngui.state_manager.ctrldev_manager.unload_driver(
-                    self.list_data[self.index][1], True)
+                self.zyngui.state_manager.ctrldev_manager.unload_driver(self.list_data[self.index][1], True)
             elif params == "AUBIO_INPUTS":
                 ain = aubio_inputs(self.zyngui.state_manager)
                 self.zyngui.screens['audio_in'].set_chain(ain)

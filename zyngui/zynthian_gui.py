@@ -1228,8 +1228,7 @@ class zynthian_gui:
 
     def cuia_toggle_audio_record(self, params=None):
         if self.current_screen == 'control' and self.is_shown_audio_player():
-            self.state_manager.audio_recorder.toggle_recording(
-                self.current_processor)
+            self.state_manager.audio_recorder.toggle_recording(self.current_processor)
             self.get_current_screen_obj().set_mode_control()
         else:
             self.state_manager.audio_recorder.toggle_recording()

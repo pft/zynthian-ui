@@ -90,16 +90,17 @@ class zynthian_gui_control(zynthian_gui_selector):
 
     def build_view(self):
         super().build_view()
-        zynsigman.register(
-            zynsigman.S_MIDI, zynsigman.SS_MIDI_CC, self.cb_midi_cc)
-        zynsigman.register(
-            zynsigman.S_MIDI, zynsigman.SS_MIDI_PC, self.cb_midi_pc)
-        if zynthian_gui_config.enable_touch_navigation:
+        if not self.shown:
             zynsigman.register(
-                zynsigman.S_GUI, zynsigman.SS_GUI_SHOW_SIDEBAR, self.cb_show_sidebar)
+                zynsigman.S_MIDI, zynsigman.SS_MIDI_CC, self.cb_midi_cc)
             zynsigman.register(
-                zynsigman.S_GUI, self.SS_GUI_CONTROL_MODE, self.cb_control_mode)
-        self.click_listbox()
+                zynsigman.S_MIDI, zynsigman.SS_MIDI_PC, self.cb_midi_pc)
+            if zynthian_gui_config.enable_touch_navigation:
+                zynsigman.register(
+                    zynsigman.S_GUI, zynsigman.SS_GUI_SHOW_SIDEBAR, self.cb_show_sidebar)
+                zynsigman.register(
+                    zynsigman.S_GUI, self.SS_GUI_CONTROL_MODE, self.cb_control_mode)
+            self.click_listbox()
         return True
 
     def hide(self):
