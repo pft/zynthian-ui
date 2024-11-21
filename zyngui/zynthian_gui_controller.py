@@ -448,9 +448,8 @@ class zynthian_gui_controller(tkinter.Canvas):
 			elif self.zctrl == self.zyngui.state_manager.zctrl_y:
 				self.plot_midi_bind("Y")
 			elif midi_learn_params := self.zyngui.chain_manager.get_midi_learn_from_zctrl(self.zctrl):
-				zmip = (midi_learn_params[0] >> 24) & 0xff
-				chan = (midi_learn_params[0] >> 16) & 0xff
-				cc = (midi_learn_params[0] >> 8) & 0xff
+				chan = (midi_learn_params[0] >> 8)
+				cc = midi_learn_params[0] & 0xff
 				if midi_learn_params[1]:
 					self.plot_midi_bind(f"{chan + 1}#{cc}")
 				else:

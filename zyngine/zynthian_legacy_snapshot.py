@@ -71,6 +71,14 @@ class zynthian_legacy_snapshot:
     def version_1(self, snapshot):
         # Convert snapshot from schema V1 to V2
 
+        absolute_cc = {}
+        if "midi_capture" in snapshot:
+            for device in list(snapshot["midi_capture"]):
+                absolute_cc |= snapshot["midi_capture"].pop(device)
+        if absolute_cc:
+            if "global" not in snapshot:
+                snapshot["global"] = {}
+            snapshot["global"]["absolute_cc"] = absolute_cc
         mixer_map = {16: 255} # Map of "MI" mixer proc id indexed by old mixer chan
         if "chains" in snapshot:
             # Get list of used processor ids:
@@ -107,8 +115,10 @@ class zynthian_legacy_snapshot:
                 if "mixer" in zs3:
                     if "chains" not in zs3:
                         zs3["chains"] = {}
-                    if "midi_cc" not in zs3:
-                        zs3["midi_cc"] = {}
+                    if "midi_capture" not in zs3:
+                        zs3["midi_capture"] = {}
+                    if "midi_cc" not in zs3["midi_capture"]:
+                        zs3["midi_capture"]["midi_cc"] = {}
                     if "processors" not in zs3:
                         zs3["processors"] = {}
                     for chan, proc_id in mixer_map.items():
@@ -123,17 +133,16 @@ class zynthian_legacy_snapshot:
                                 zs3["processors"][id]["controllers"][param]={"value":val}
                     if "midi_learn" in zs3["mixer"]:
                         for key, conf in zs3["mixer"]["midi_learn"].items():
-                            chan,cc = key.split(",")
+                            chan, cc = key.split(",")
                             strip_id = conf[0]
                             proc_id = mixer_map[int(strip_id)]
                             param = conf[1]
                             if chan not in zs3["midi_cc"]:
                                 zs3["midi_cc"][chan] = {}
-                            if cc not in zs3["midi_cc"][chan]:
-                                zs3["midi_cc"][chan][cc] = []
-                            zs3["midi_cc"][chan][cc].append([proc_id, param])
-                            #TODO: For chain based MIDI binding: within zs3: "chains"{"chain_id":{"midi_cc"{chan:{cc:[[proc_id,symbol],...]}} 
-        #TODO: Get mixer midi_learn from zs3
+                            key = chan << 8 | cc
+                            if key not in zs3["midi_cc"]:
+                                zs3["midi_cc"][key] = []
+                            zs3["midi_cc"][key].append([proc_id, param])
         return snapshot
 
     def version_0(self, snapshot):

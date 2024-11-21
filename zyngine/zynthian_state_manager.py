@@ -1570,8 +1570,8 @@ class zynthian_state_manager:
                 chain_state["audio_thru"] = chain.audio_thru
             # Add chain MIDI mapping
             for key, zctrls in self.chain_manager.chain_midi_cc_binding.items():
-                if chain_id == (key >> 16) & 0xff:
-                    cc = (key >> 8) & 0x7f
+                if chain_id == key >> 8:
+                    cc = key & 0x7f
                     # TODO: Do not save default engine mapping
                     if "midi_cc" not in chain_state:
                         chain_state["midi_cc"] = {}
@@ -1822,15 +1822,13 @@ class zynthian_state_manager:
             # Aubio state
             if uid == "AUBIO:in":
                 mcstate[uid]["audio_in"] = self.aubio_in
-            # Add global / absolute MIDI mapping
-            for key, zctrls in self.chain_manager.absolute_midi_cc_binding.items():
-                if idev == (key >> 24) & 0xff:
-                    chan_cc = (key >> 8) & 0x7f7f
-                    if "midi_cc" not in mcstate[uid]:
-                        mcstate[uid]["midi_cc"] = {}
-                    mcstate[uid]["midi_cc"][chan_cc] = []
-                    for zctrl in zctrls:
-                        mcstate[uid]["midi_cc"][chan_cc].append([zctrl.processor.id, zctrl.symbol])
+        # Add global / absolute MIDI mapping
+        for key, zctrls in self.chain_manager.absolute_midi_cc_binding.items():
+            if "midi_cc" not in mcstate:
+                mcstate["midi_cc"] = {}
+            mcstate["midi_cc"][key] = []
+            for zctrl in zctrls:
+                mcstate["midi_cc"][key].append([zctrl.processor.id, zctrl.symbol])
 
         return mcstate
 

@@ -144,19 +144,8 @@ ZynthianState = {
                     "disable_ctrldev": 0,  # 1 to disable loading of controller device driver
                     "routed_chains": [],  # List of chain zmops this input is routed to
                     # List of audio inputs, e.g. for aubio (optional)
-                    "audio_in": [0, 1],
-                    "midi_cc": {  # Map of MIDI CC mapping, indexed by MIDI channel
-                        "0": {  # Map of controls, indexed by CC number
-                            "121": [  # List of controller configs
-                                # Controller config [proc_id, symbol]
-                                [1, "volume"],
-                                # ... Other controllers
-                            ],
-                            # ... Other CCs
-                        },
-                        # ... Other MIDI channels
-                    }
-                }
+                    "audio_in": [0, 1]
+                }, # ...more MIDI capture devices
             },
             "global": {  # Dictionary of global params settable by zs3 indexed by param name
                 "midi_transpose": 0,  # Semitones to globally transpose
@@ -164,6 +153,18 @@ ZynthianState = {
                 "zctrl_x": [0, "volume"],
                 # Mapping of y-axis controller [proc_id, symbol]
                 "zctrl_y": [0, "cutoff"],
+                "absolute_cc": {  # Map of Absolute MIDI CC mapping, indexed by MIDI channel
+                    "0": {  # Map of controls, indexed by CC number
+                        "121": [  # List of controller configs
+                            # Controller config [proc_id, symbol]
+                            [1, "volume"],
+                            # ... Other controllers
+                        ],
+                        # ... Other CCs
+                    },
+                    # ... Other MIDI channels
+                }
+
             }
         },
         "1/2": {},  # ZS3 for channel 1, program change 2

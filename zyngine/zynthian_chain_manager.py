@@ -115,10 +115,9 @@ class zynthian_chain_manager:
         self.midi_chan_2_chain_ids = [list() for _ in range(
             MAX_NUM_MIDI_CHANS)]  # Chain IDs mapped by MIDI channel
 
-        # Map of list of zctrls indexed by 24-bit ZMOP,CHAN,CC
-        self.absolute_midi_cc_binding = {}
-        self.chain_midi_cc_binding = {}  # Map of list of zctrls indexed by 16-bit CHAIN,CC
-        self.chan_midi_cc_binding = {}  # Map of list of zctrls indexed by 16-bit CHAN,CC
+        self.absolute_midi_cc_binding = {} # Map of list of zctrls indexed by CHAN<<8|CC
+        self.chain_midi_cc_binding = {}  # Map of list of zctrls indexed by CHAIN<<8|CC
+        self.chan_midi_cc_binding = {}  # Map of list of zctrls indexed by CHAN<<8|CC
 
         # Map of lists of currently held (sustained) zctrls, indexed by cc number - first element indicates pedal state
         self.held_zctrls = {
@@ -1159,7 +1158,7 @@ class zynthian_chain_manager:
                 for slot_state in chain_state["slots"]:
                     # slot_state is a dict of proc_id:proc_type for procs in this slot
                     for index, proc_id in enumerate(slot_state):
-                        if proc_id == "0":
+                        if proc_id == "255":
                             continue # Do not replace main mixbus audio mixer processor
                         eng_code = slot_state[proc_id]
                         try:
@@ -1199,20 +1198,20 @@ class zynthian_chain_manager:
         if zmip is None:
             if zctrl.processor:
                 if zctrl.processor.midi_chan is not None:
-                    key = (chan << 16) | (midi_cc << 8)
+                    key = (chan << 8) | midi_cc
                     if key in self.chan_midi_cc_binding:
                         self.chan_midi_cc_binding[key].append(zctrl)
                     else:
                         self.chan_midi_cc_binding[key] = [zctrl]
                 if zctrl.processor.chain_id is not None:
-                    key = (zctrl.processor.chain_id << 16) | (midi_cc << 8)
+                    key = (zctrl.processor.chain_id << 8) | midi_cc
                     if key in self.chain_midi_cc_binding:
                         self.chain_midi_cc_binding[key].append(zctrl)
                     else:
                         self.chain_midi_cc_binding[key] = [zctrl]
         else:
             # Absolute mapping
-            key = (zmip << 24) | (chan << 16) | (midi_cc << 8)
+            key = chan << 8 | midi_cc
             if key in self.absolute_midi_cc_binding:
                 if zctrl not in self.absolute_midi_cc_binding[key]:
                     self.absolute_midi_cc_binding[key].append(zctrl)
@@ -1314,7 +1313,7 @@ class zynthian_chain_manager:
             try:
                 for proc in zynautoconnect.ctrl_fb_procs:
                     if proc.part_i == midi_chan:
-                        key = (proc.chain_id << 16) | (cc_num << 8)
+                        key = (proc.chain_id << 8) | cc_num
                         zctrls = self.chain_midi_cc_binding[key]
                         for zctrl in zctrls:
                             # logging.debug(f"CONTROLLER FEEDBACK {zctrl.symbol} ({midi_chan}) => {cc_val}")
@@ -1326,7 +1325,7 @@ class zynthian_chain_manager:
 
         # Handle absolute CC binding
         try:
-            key = (zmip << 24) | (midi_chan << 16) | (cc_num << 8)
+            key = midi_chan << 8 | cc_num
             zctrls = self.absolute_midi_cc_binding[key]
             for zctrl in zctrls:
                 zctrl.midi_control_change(cc_val)
@@ -1336,7 +1335,7 @@ class zynthian_chain_manager:
         # Handle active chain CC binding
         if zynautoconnect.get_midi_in_dev_mode(zmip):
             try:
-                key = (self.active_chain_id << 16) | (cc_num << 8)
+                key = self.active_chain_id << 8 | cc_num
                 zctrls = self.chain_midi_cc_binding[key]
                 for zctrl in zctrls:
                     zctrl.midi_control_change(cc_val)
@@ -1346,7 +1345,7 @@ class zynthian_chain_manager:
         # Handle channel CC binding
         else:
             try:
-                key = (midi_chan << 16) | (cc_num << 8)
+                key = midi_chan << 8 | cc_num
                 zctrls = self.chan_midi_cc_binding[key]
                 for zctrl in zctrls:
                     zctrl.midi_control_change(cc_val)
