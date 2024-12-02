@@ -81,10 +81,9 @@ class zynthian_gui_control_xy():
 
         # Setup Canvas Callbacks
         self.canvas.bind("<B1-Motion>", self.cb_canvas)
-        if zynthian_gui_config.enable_touch_navigation:
-            self.last_tap = 0
-            self.tap_count = 0
-            self.canvas.bind("<Button-1>", self.cb_press)
+        self.last_tap = 0
+        self.tap_count = 0
+        self.canvas.bind("<Button-1>", self.cb_press)
 
         # Create Cursor
         self.hline = self.canvas.create_line(

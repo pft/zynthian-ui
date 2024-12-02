@@ -95,7 +95,7 @@ class zynthian_chain:
             self.title = "Main"
             self.audio_in = []
             # Default use first two physical audio outputs
-            self.audio_out = ["system:playback_[1,2]$"]
+            self.audio_out = ["^system:playback_1$|^system:playback_2$"]
             self.audio_thru = True
         else:
             self.title = ""
