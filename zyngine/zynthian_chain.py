@@ -58,12 +58,14 @@ class zynthian_chain:
 
         # Each slot contains a list of parallel processors
         self.midi_slots = []  # Midi subchain (list of lists of processors)
-        self.synth_slots = []  # Synth/generator/special slots (should be single slot)
+        # Synth/generator/special slots (should be single slot)
+        self.synth_slots = []
         self.audio_slots = []  # Audio subchain (list of lists of processors)
-        self.fader_pos = 0 # Position of fader in audio effects chain
+        self.fader_pos = 0  # Position of fader in audio effects chain
 
         self.chain_id = chain_id  # Chain's ID
-        self.midi_chan = midi_chan  # Chain's MIDI channel - None for purely audio chain, 0xffff for *All Chains*
+        # Chain's MIDI channel - None for purely audio chain, 0xffff for *All Chains*
+        self.midi_chan = midi_chan
         self.mixer_chan = None
         self.zmop_index = None
         self.midi_thru = midi_thru  # True to pass MIDI if chain empty
@@ -92,7 +94,8 @@ class zynthian_chain:
             # Main mix bus
             self.title = "Main"
             self.audio_in = []
-            self.audio_out = ["system:playback_[1,2]$"] # Default use first two physical audio outputs
+            # Default use first two physical audio outputs
+            self.audio_out = ["^system:playback_1$|^system:playback_2$"]
             self.audio_thru = True
         else:
             self.title = ""
@@ -147,12 +150,12 @@ class zynthian_chain:
     def set_zmop_options(self):
         if self.zmop_index is not None and len(self.synth_slots) > 0:
             # IMPORTANT!!! Synth chains drop CC & PC messages
-            #logging.info(f"Dropping MIDI CC & PC from chain {self.chain_id}")
+            # logging.info(f"Dropping MIDI CC & PC from chain {self.chain_id}")
             lib_zyncore.zmop_set_flag_droppc(self.zmop_index, 1)
             lib_zyncore.zmop_set_flag_dropcc(self.zmop_index, 1)
         else:
             # Audio & MIDI chains doesn't drop CC & PC messages
-            #logging.info(f"Routing MIDI CC & PC to chain {self.chain_id}")
+            # logging.info(f"Routing MIDI CC & PC to chain {self.chain_id}")
             lib_zyncore.zmop_set_flag_droppc(self.zmop_index, 0)
             lib_zyncore.zmop_set_flag_dropcc(self.zmop_index, 0)
 
@@ -197,7 +200,7 @@ class zynthian_chain:
 
     def set_title(self, title):
         """ Set user defined title
-        
+
         title : Chain title (None to use processor title
         """
 
@@ -221,36 +224,46 @@ class zynthian_chain:
             - preset: include the selected preset
         """
         parts = []
-        try:
-            if self.title:
-                parts.append(self.title)
-            elif self.chain_id == 0:
-                parts.append("Main")
-            elif not self.synth_slots and self.audio_thru:
-                parts.append("Audio Input " + ','.join([str(i) for i in self.audio_in]))
 
-            if self.synth_slots:
-                proc = self.synth_slots[0][0]
-            elif self.get_slot_count("Audio Effect"):
-                proc = self.get_processors("Audio Effect")[0]
-            elif self.get_slot_count("MIDI Tool"):
-                proc = self.get_processors("MIDI Tool")[0]
+        if self.title:
+            parts.append(self.title)
+        elif self.chain_id == 0:
+            parts.append("Main")
+        elif not self.synth_slots and self.audio_thru:
+            parts.append("Audio Input " +
+                         ','.join([str(i) for i in self.audio_in]))
 
-            if proc:
-                if basepath:
-                    parts.append(proc.get_basepath())
+        if self.synth_slots:
+            proc = self.synth_slots[0][0]
+        elif self.get_slot_count("Audio Effect"):
+            proc = self.get_processors("Audio Effect")[0]
+        elif self.get_slot_count("MIDI Tool"):
+            proc = self.get_processors("MIDI Tool")[0]
+        else:
+            proc = None
+
+        if proc:
+            if basepath:
+                parts.append(proc.get_basepath())
+            else:
+                name = proc.get_name()
+                if name:
+                    parts.append(name)
+            if preset:
+                preset_name = proc.get_preset_name()
+                if preset_name:
+                    parts.append(preset_name)
+
+        if not parts:
+            if self.is_audio():
+                if self.is_midi():
+                    chain_type = "Synth"
                 else:
-                    name = proc.get_name()
-                    if name:
-                        parts.append(name)
-                if preset:
-                    preset_name = proc.get_preset_name()
-                    if preset_name:
-                        parts.append(preset_name)
-            elif not parts:
-                parts.append(f"Chain {self.chain_id}")
-        except:
-            pass
+                    chain_type = "Audio"
+            elif self.is_midi():
+                chain_type = "MIDI"
+            parts.append(f"{chain_type} Chain {self.chain_id}")
+
         return parts
 
     def get_description(self, n_lines=None):
@@ -260,7 +273,6 @@ class zynthian_chain:
         """
         parts = self.get_description_parts(basepath=False, preset=True)
         return "\n".join(parts[:n_lines])
-
 
     def get_name(self):
         """Get chain name (short title)
@@ -280,7 +292,7 @@ class zynthian_chain:
     def rebuild_audio_graph(self):
         """Build dictionary of lists of sources mapped by destination"""
 
-        #TODO: This is called too frequently
+        # TODO: This is called too frequently
         if not zynautoconnect.acquire_lock():
             return
 
@@ -305,7 +317,8 @@ class zynthian_chain:
                 else:
                     # Post fader
                     if i == self.fader_pos:
-                        self.audio_routes[processor.get_jackname()] = [f"zynmixer:output_{self.mixer_chan + 1:02d}"]
+                        self.audio_routes[processor.get_jackname()] = [
+                            f"zynmixer:output_{self.mixer_chan + 1:02d}"]
                     else:
                         for prev_proc in self.audio_slots[i - 1]:
                             sources.append(prev_proc.get_jackname())
@@ -343,10 +356,10 @@ class zynthian_chain:
                     sources.append(processor.get_jackname())
             else:
                 # Use mixer channel output
-                #if self.mixer_chan < 16: #TODO: Get main mixbus channel from zynmixer
+                # if self.mixer_chan < 16: #TODO: Get main mixbus channel from zynmixer
                 #    sources = [] # Do not route - zynmixer will normalise outputs to main mix bus
-                #else:
-                    sources = [f"zynmixer:output_{self.mixer_chan + 1:02d}"]
+                # else:
+                sources = [f"zynmixer:output_{self.mixer_chan + 1:02d}"]
             for output in self.get_audio_out():
                 self.audio_routes[output] = sources.copy()
 
@@ -354,20 +367,23 @@ class zynthian_chain:
 
     def get_input_pairs(self):
         """Get jack regexp for pairs of system:capture ports
-        
+
         Returns : List of regexps
         """
-        
+
         if self.chain_id == 0:
             return self.audio_in.copy()
         sources = []
+        input_ports = zynautoconnect.get_audio_capture_ports()
         for i in range(0, len(self.audio_in), 2):
             a = self.audio_in[i]
+            if a > len(input_ports):
+                continue
             if i < len(self.audio_in) - 1:
                 b = self.audio_in[i + 1]
-                sources.append(f"system:capture_({a}|{b})$")
+                sources.append(f"^{input_ports[a-1].name}$|^{input_ports[b-1].name}$")
             else:
-                sources.append(f"system:capture_({a})$")
+                sources.append(f"^{input_ports[a-1].name}$")
         return sources
 
     def rebuild_midi_graph(self):
@@ -375,11 +391,11 @@ class zynthian_chain:
 
         if not zynautoconnect.acquire_lock():
             return
- 
+
         self.midi_routes = {}
         for i, slot in enumerate(self.midi_slots):
             if i == 0:
-                continue # Chain inputs are handled by autoconnect
+                continue  # Chain inputs are handled by autoconnect
             for processor in slot:
                 sources = []
                 for prev_proc in self.midi_slots[i - 1]:
@@ -392,12 +408,18 @@ class zynthian_chain:
                 sources.append(prev_proc.get_jackname())
         if self.synth_slots:
             for proc in self.synth_slots[0]:
-                self.midi_routes[proc.engine.jackname] = sources
+                # TODO: Should always use engine's get_jackname? => proc.get_jackname(True)
+                dst_jackname = proc.engine.get_jackname()
+                self.midi_routes[dst_jackname] = sources
+                # Special Engines can generate MIDI output too!!
+                if proc.type == "Special":
+                    sources = [dst_jackname]
         elif len(self.midi_slots) == 0 and self.midi_thru:
-            for output in self.midi_out:
-                self.midi_routes[output] = self.midi_in
-        
-        # Feed output of MIDI chain to all audio processors - ideally this should only feed processors with MIDI inputs but it is probably as simple to let autoconnect deal with that.
+            sources = self.midi_in
+        for output in self.midi_out:
+            self.midi_routes[output] = sources
+        # Feed output of MIDI chain to all audio processors - ideally this should only feed processors with
+        # MIDI inputs but it is probably as simple to let autoconnect deal with that.
         for slot in self.audio_slots:
             for proc in slot:
                 self.midi_routes[proc.engine.jackname] = sources
@@ -460,11 +482,15 @@ class zynthian_chain:
     def get_midi_out(self):
         return self.midi_out
 
-    def toggle_midi_out(self, jackname):
-        if jackname not in self.midi_out:
-            self.midi_out.append(jackname)
+    def toggle_midi_out(self, dest):
+        """ Set/unset a MIDI output route
+        dest : destination ID. A jack port name/alias (string) or a chain ID (integer)
+        """
+
+        if dest not in self.midi_out:
+            self.midi_out.append(dest)
         else:
-            self.midi_out.remove(jackname)
+            self.midi_out.remove(dest)
 
         self.rebuild_midi_graph()
         zynautoconnect.request_midi_connect(True)
@@ -521,7 +547,7 @@ class zynthian_chain:
         count = 0
         if type is None:
             if slot is None or slot < 0:
-                for j in self.midi_slots +self.synth_slots + self.audio_slots:
+                for j in self.midi_slots + self.synth_slots + self.audio_slots:
                     count += len(j)
         else:
             slots = self.get_slots_by_type(type)
@@ -557,7 +583,7 @@ class zynthian_chain:
             if slot < len(self.audio_slots):
                 return self.audio_slots[slot]
         else:
-            slots = self.get_slots_by_type(type) 
+            slots = self.get_slots_by_type(type)
             if slot is None or slot < 0:
                 for j in slots:
                     processors += j
@@ -608,7 +634,7 @@ class zynthian_chain:
                     self.slots[i][j] = new_processor
                     self.remove_processor(old_processor)
                     new_processor.set_midi_chan(self.midi_chan)
-                    #TODO: Should we rebuild graph?
+                    # TODO: Should we rebuild graph?
                     zynautoconnect.request_audio_connect(True)
                     zynautoconnect.request_midi_connect(True)
                     if self.current_processor == old_processor:
@@ -656,7 +682,7 @@ class zynthian_chain:
             else:
                 self.current_processor = None
 
-        #del processor => I don't think this is needed nor right?? (Jofemodo)
+        # del processor => I don't think this is needed nor right?? (Jofemodo)
         return True
 
     def remove_all_processors(self):
@@ -719,7 +745,8 @@ class zynthian_chain:
         """
 
         if processor1.type != processor2.type or processor1.type:
-            logging.error("Can only swap MIDI or AudioFX processors of same type")
+            logging.error(
+                "Can only swap MIDI or AudioFX processors of same type")
             return False
         slot1 = slot2 = None
         par1 = par2 = None

@@ -103,9 +103,9 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 		#'output_latency',			# range 0 -> ...
 		#'trigger_latency',			# range 0 -> ...
 		#'autoset_latency',			# 0 = off, not 0 = on
-		'mute_quantized',			# 0 = off, not 0 = on
-		'overdub_quantized',		# 0 == off, not 0 = on
-		'replace_quantized',		# 0 == off, not 0 = on (undocumented)
+		#'mute_quantized',			# 0 = off, not 0 = on
+		#'overdub_quantized',		# 0 == off, not 0 = on
+		#'replace_quantized',		# 0 == off, not 0 = on (undocumented)
 		#'discrete_prefader',		# 0 == off, not 0 = on
 		#'next_state,'				# same as state
 		'stretch_ratio',			# 0.5 -> 4.0 (undocumented)
@@ -119,9 +119,9 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 		'round',					# 0 = off,  not 0 = on
 		'relative_sync',			# 0 = off, not 0 = on
 		'quantize',					# 0 = off, 1 = cycle, 2 = 8th, 3 = loop
-		#'mute_quantized',			# 0 = off, not 0 = on
-		#'overdub_quantized',		# 0 == off, not 0 = on
-		#'replace_quantized',		# 0 == off, not 0 = on (undocumented)
+		'mute_quantized',			# 0 = off, not 0 = on
+		'overdub_quantized',		# 0 == off, not 0 = on
+		'replace_quantized',		# 0 == off, not 0 = on (undocumented)
 	]
 
 	# SL_GLOBAL_PARAMS act on whole engine - sent with osc command /set
@@ -323,7 +323,20 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 
 		self.osc_target_port = self.SL_PORT
 
-		self.command = ["sooperlooper", "-q", "-l 0", "-D no", f"-p {self.osc_target_port}", f"-j{self.jackname}"]
+		# Load custom MIDI bindings
+		custom_slb_fpath = self.config_dir + "/sooperlooper/zynthian.slb"
+		if os.path.exists(custom_slb_fpath):
+			logging.info(f"loading sooperlooper custom MIDI bindings: {custom_slb_fpath}")
+		else:
+			custom_slb_fpath = None
+
+		# Build SL command line
+		#if self.config_remote_display():
+		#	self.command = ["slgui", "-l 0", f"-P {self.osc_target_port}", f"-J {self.jackname}"]
+		#else:
+		self.command = ["sooperlooper", "-q", "-l 0", "-D no", f"-p {self.osc_target_port}", f"-j {self.jackname}"]
+		if custom_slb_fpath:
+			self.command += ["-m", custom_slb_fpath]
 
 		self.state = [-1] * self.MAX_LOOPS  # Current SL state for each loop
 		self.next_state = [-1] * self.MAX_LOOPS  # Next SL state for each loop (-1 if no state change pending)
@@ -332,7 +345,8 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 		self.loop_count = 1
 		self.channels = 2
 
-		self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_sooperlooper.py"
+		ui_dir = os.environ.get('ZYNTHIAN_UI_DIR', "/zynthian/zynthian-ui")
+		self.custom_gui_fpath = f"{ui_dir}/zyngui/zynthian_widget_sooperlooper.py"
 		self.monitors_dict = OrderedDict({
 			"state": 0,
 			"next_state": -1,
@@ -354,7 +368,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 			['substitute', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 106],
 			['insert', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 107],
 			['undo/redo', {'value': 1, 'labels': ['<', '<>', '>']}],
-			['prev/next', {'value': 1, 'labels': ['<', '<>', '>']}],
+			['prev/next', {'value': 63, 'value_max': 127, 'labels': ['<', '<>', '>']}],
 			['trigger', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 108],
 			['mute', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 109],
 			['oneshot', {'value': 0, 'value_max': 1, 'labels': ['off', 'on'], 'is_toggle': True}, 110],
@@ -391,7 +405,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 			['Loop record 2', ['replace', 'substitute', 'insert', 'undo/redo']],
 			['Loop control', ['trigger', 'oneshot', 'mute', 'pause']],
 			['Loop time/pitch', ['reverse', 'rate', 'stretch_ratio', 'pitch_shift']],
-			['Loop levels', ['wet', 'dry', 'feedback']],
+			['Loop levels', ['wet', 'dry', 'feedback', 'selected_loop_num']],
 			['Global loop', ['selected_loop_num', 'loop_count', 'prev/next', 'single_pedal']],
 			['Global levels', ['rec_thresh', 'input_gain']],
 			['Global quantize', ['quantize', 'mute_quantized', 'overdub_quantized', 'replace_quantized']],
@@ -406,9 +420,9 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 	# ---------------------------------------------------------------------------
 
 	def start(self):
-		#logging.warning("Starting SooperLooper")
+		logging.debug(f"Starting SooperLooper with command: {self.command}")
 		self.osc_init()
-		self.proc = Popen(self.command, stdout=DEVNULL, stderr=DEVNULL)
+		self.proc = Popen(self.command, stdout=DEVNULL, stderr=DEVNULL, env=self.command_env, cwd=self.command_cwd)
 		sleep(1)  # TODO: Cludgy wait - maybe should perform periodic check for server until reachable
 
 		# Register for common events from sooperlooper server - request changes to the currently selected loop
@@ -433,12 +447,13 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 			try:
 				logging.info("Stoping Engine " + self.name)
 				self.proc.terminate()
-				sleep(0.2)
-				self.proc.kill()
+				try:
+					self.proc.wait(0.2)
+				except:
+					self.proc.kill()
 				self.proc = None
 			except Exception as err:
 				logging.error(f"Can't stop engine {self.name} => {err}")
-
 		self.osc_end()
 
 	# ---------------------------------------------------------------------------
@@ -589,6 +604,15 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 				if pedal_dur > 1.5:
 					if self.pedal_taps:
 						self.osc_server.send(self.osc_target, '/sl/-3/hit', ('s', 'undo_all'))
+		elif zctrl.symbol == 'selected_loop_num':
+			self.select_loop(zctrl.value - 1, True)
+		elif zctrl.symbol in self.SL_LOOP_PARAMS:  # Selected loop
+			self.osc_server.send(self.osc_target, '/sl/-3/set', ('s', zctrl.symbol), ('f', zctrl.value))
+		elif zctrl.symbol in self.SL_LOOP_GLOBAL_PARAMS:  # All loops
+			self.osc_server.send(self.osc_target, '/sl/-1/set', ('s', zctrl.symbol), ('f', zctrl.value))
+		elif zctrl.symbol in self.SL_GLOBAL_PARAMS:  # Global params
+			self.osc_server.send(self.osc_target, '/set', ('s', zctrl.symbol), ('f', zctrl.value))
+
 		elif zctrl.is_toggle:
 			# Use is_toggle to indicate the SL function is a toggle, i.e. press to engage, press to release
 			if zctrl.symbol == 'record' and zctrl.value == 0 and self.state[self.selected_loop] == SL_STATE_REC_STARTING:
@@ -607,13 +631,11 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 			zctrl.set_value(1, False)
 		elif zctrl.symbol == 'prev/next':
 			# Use single controller to perform prev(CCW) and next (CW)
-			if zctrl.value == 0:
+			if zctrl.value  < 63:
 				self.select_loop(self.selected_loop - 1, True)
-			elif zctrl.value == 2:
+			elif zctrl.value  > 63:
 				self.select_loop(self.selected_loop + 1, True)
-			zctrl.set_value(1, False)
-		elif zctrl.symbol == 'selected_loop_num':
-			self.select_loop(zctrl.value - 1, True)
+			zctrl.set_value(63, False)
 		elif zctrl.symbol == 'loop_count':
 			for loop in range(self.loop_count, zctrl.value):
 				self.osc_server.send(self.osc_target, '/loop_add', ('i', self.channels), ('f', 30), ('i', 0))
@@ -621,13 +643,6 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 				# Don't remove loops - let GUI offer option to (confirm and) remove
 				zctrl.set_value(self.loop_count, False)
 				self.monitors_dict['loop_del'] = True
-		else:
-			if zctrl.symbol in self.SL_LOOP_PARAMS:  # Selected loop
-				self.osc_server.send(self.osc_target, '/sl/-3/set', ('s', zctrl.symbol), ('f', zctrl.value))
-			if zctrl.symbol in self.SL_LOOP_GLOBAL_PARAMS:  # All loops
-				self.osc_server.send(self.osc_target, '/sl/-1/set', ('s', zctrl.symbol), ('f', zctrl.value))
-			if zctrl.symbol in self.SL_GLOBAL_PARAMS:  # Global params
-				self.osc_server.send(self.osc_target, '/set', ('s', zctrl.symbol), ('f', zctrl.value))
 
 	def get_monitors_dict(self):
 		return self.monitors_dict
@@ -769,7 +784,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
 		#self.processors[0].status = self.SL_STATES[self.state]['icon']
 
 	def select_loop(self, loop, send=False):
-		if loop < 0 or loop >= self.MAX_LOOPS:
+		if loop < 0 or loop >= self.loop_count:
 			return  # TODO: Handle -1 == all loops
 		self.selected_loop = int(loop)
 		self.monitors_dict['state'] = self.state[self.selected_loop]
