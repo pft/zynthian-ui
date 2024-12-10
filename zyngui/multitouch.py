@@ -26,6 +26,7 @@
 # Based on code from https://github.com/pimoroni/python-multitouch
 
 import struct
+import tkinter
 import logging
 from enum import Enum
 from glob import glob
@@ -323,8 +324,21 @@ class MultiTouch(object):
             event.time = now
 
             if event._type == MultitouchTypes.MULTI_PRESS:
-                event.widget = zynthian_gui_config.top.winfo_containing(
-                    event.x_root, event.y_root)
+                # Find a widget for the touch event
+                try:
+                    event.widget = zynthian_gui_config.top.winfo_containing(event.x_root, event.y_root)
+                except:
+                    gui_obj = zynthian_gui_config.zyngui.get_current_screen_obj()
+                    if isinstance(gui_obj, tkinter.Frame):
+                        event.widget = gui_obj
+                        #logging.debug("Using current screen object for touch event")
+                    else:
+                        try:
+                            event.widget = gui_obj.main_frame
+                            #logging.debug("Using main_frame for touch event")
+                        except:
+                            logging.error("Can't find a widget for touch event")
+                            continue
                 event.offset_x = event.widget.winfo_rootx()
                 event.offset_y = event.widget.winfo_rooty()
                 event.x = event.x_root - event.offset_x  # Reassert because offset has changed
@@ -472,8 +486,7 @@ class MultiTouch(object):
         event = self._g_pending
         self._g_pending = None
         try:
-            event.tag = event.widget.find_overlapping(
-                event.x, event.y, event.x, event.y)[0]
+            event.tag = event.widget.find_overlapping(event.x, event.y, event.x, event.y)[0]
         except:
             event.tag = None
         for ev_handler in self._on_press:

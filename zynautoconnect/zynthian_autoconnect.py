@@ -25,16 +25,19 @@
 import os
 import re
 import usb
-import jack
-import logging
 import json
+import jack
+import psutil
+import pexpect
+import logging
+import alsaaudio
 from time import sleep
 from threading import Thread, Lock
 
 # Zynthian specific modules
+import zynconf
 from zyncoder.zyncore import lib_zyncore
 from zyngui import zynthian_gui_config
-import zynconf
 
 # -------------------------------------------------------------------------------
 # Configure logging
@@ -65,7 +68,6 @@ class fake_port:
     def unset_alias(self, alias):
         pass
 
-
 # -------------------------------------------------------------------------------
 # Define some Constants and Global Variables
 # -------------------------------------------------------------------------------
@@ -93,6 +95,8 @@ sidechain_map = {}
 sidechain_ports = []
 # List of chain ids for chains with solo enabled
 solo_chain_ids = []
+# Map of alsa_out processes, indexed by alsa device name
+alsa_audio_dests = {}
 
 # These variables are initialized in the init() function. These are "example values".
 max_num_devs = 16     			# Max number of MIDI devices
@@ -113,6 +117,19 @@ ctrl_fb_procs = []
 
 # Map of user friendly names indexed by device uid (alias[0])
 midi_port_names = {}
+
+# Get the main jack audio device
+jack_audio_device = ""
+for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+    try:
+        if 'jackd' in proc.info['name']:
+            cmdline = proc.info['cmdline']
+            for param in cmdline:
+                if param.startswith("hw:"):
+                    jack_audio_device = param[3:]
+                    break
+    except:
+        pass
 
 # ------------------------------------------------------------------------------
 
@@ -145,7 +162,7 @@ def set_port_friendly_name(port, friendly_name=None):
 
     try:
         alias1 = port.aliases[0]
-        if friendly_name is None:
+        if not friendly_name:
             # Reset name
             if alias1 in midi_port_names:
                 midi_port_names.pop(alias1)
@@ -321,6 +338,20 @@ def reset_midi_in_dev_all():
 
 # ------------------------------------------------------------------------------
 # Audio port helpers
+
+def update_system_audio_aliases():
+    for dir in (False, True):
+        ports = jclient.get_ports("system:", is_audio=True, is_input=dir, is_output=not dir)
+        for i, port in enumerate(ports):
+            if port.aliases:
+                parts = port.aliases[0].split(":")
+                if len(parts) != 4 or parts[0] != "alsa_pcm" and parts[1] != "hw":
+                    continue
+                alias = f"{parts[2]} {i + 1}"
+                for a in port.aliases:
+                    port.unset_alias(a)
+                port.set_alias(alias)
+
 
 def add_sidechain_ports(jackname):
     """Add ports that should be treated as sidechain inputs
@@ -973,7 +1004,173 @@ def audio_autoconnect():
 
 
 def get_hw_audio_dst_ports():
-    return hw_audio_dst_ports
+    return jclient.get_ports("system:playback", is_input=True, is_audio=True, is_physical=True) + jclient.get_ports("zynaout", is_input=True, is_audio=True)
+
+
+def update_hw_audio_ports():
+    global alsa_audio_srcs, alsa_audio_dests
+
+    dirty = False
+    if zynthian_gui_config.hotplug_audio_enabled:
+        # Add new devices
+        for device in get_alsa_hotplug_audio_devices(False):
+            if device not in zynthian_gui_config.disabled_audio_in:
+                dirty |= start_alsa_in(device)
+        for device in get_alsa_hotplug_audio_devices(True):
+            if device not in zynthian_gui_config.disabled_audio_out:
+                dirty |= start_alsa_out(device)
+
+        # Remove disconnected devices
+        for device in list(alsa_audio_srcs):
+            try:
+                while True:
+                    proc = alsa_audio_srcs[device]
+                    line = proc.readline()
+                    if line.startswith("err"):
+                        proc.terminate()
+                        alsa_audio_srcs.pop(device)
+                        dirty = True
+                        break
+                    elif not line:
+                        break
+            except:
+                continue
+        for device in list(alsa_audio_dests):
+            try:
+                while True:
+                    proc = alsa_audio_dests[device]
+                    line = proc.readline()
+                    if line.startswith("err"):
+                        proc.terminate()
+                        alsa_audio_dests.pop(device)
+                        dirty = True
+                        break
+                    elif not line:
+                        break
+            except:
+                continue
+    if dirty:
+        # Rebuild chain audio routes
+        try:
+            sleep(0.5) # Have to wait for jack to finish registering ports
+            for chain in chain_manager.chains.values():
+                chain.rebuild_audio_graph()
+        except Exception as e:
+            logging.error(e)
+
+    return dirty
+
+
+def enable_hotplug():
+    zynthian_gui_config.hotplug_audio_enabled = True
+    zynconf.save_config({"ZYNTHIAN_HOTPLUG_AUDIO": str(zynthian_gui_config.hotplug_audio_enabled)})
+    update_hw_audio_ports()
+    audio_autoconnect()
+
+
+def disable_hotplug():
+    zynthian_gui_config.hotplug_audio_enabled = False
+    zynconf.save_config({"ZYNTHIAN_HOTPLUG_AUDIO": str(zynthian_gui_config.hotplug_audio_enabled)})
+    stop_all_alsa_in_out()
+
+
+def enable_audio_input_device(device, enable=True):
+    if enable:
+        if start_alsa_in(device):
+            if device in zynthian_gui_config.disabled_audio_in:
+                zynthian_gui_config.disabled_audio_in.remove(device)
+    else:
+        stop_alsa_in(device)
+        if device not in zynthian_gui_config.disabled_audio_in:
+            zynthian_gui_config.disabled_audio_in.append(device)
+    zynconf.save_config({"ZYNTHIAN_HOTPLUG_AUDIO_DISABLED_IN": ",".join(zynthian_gui_config.disabled_audio_in)})
+
+
+def enable_audio_output_device(device, enable=True):
+    if enable:
+        if start_alsa_out(device):
+            if device in zynthian_gui_config.disabled_audio_out:
+                zynthian_gui_config.disabled_audio_out.remove(device)
+    else:
+        stop_alsa_out(device)
+        if device not in zynthian_gui_config.disabled_audio_out:
+            zynthian_gui_config.disabled_audio_out.append(device)
+    zynconf.save_config({"ZYNTHIAN_HOTPLUG_AUDIO_DISABLED_OUT": ",".join(zynthian_gui_config.disabled_audio_out)})
+
+
+def get_alsa_hotplug_audio_devices(playback=True):
+    devices = []
+    for card in alsaaudio.pcms(alsaaudio.PCM_PLAYBACK if playback else alsaaudio.PCM_CAPTURE):
+        if card == jack_audio_device:
+            continue
+        if card.startswith("hw:"):
+            device = card[8:card.find(",")]
+            if device != jack_audio_device:
+                devices.append(device)
+    return devices
+
+
+def start_alsa_in(device):
+    global alsa_audio_srcs
+    if device in alsa_audio_srcs:
+        return False
+    proc = pexpect.spawn(f"alsa_in -d hw:{device} -j zynain_{device}", encoding="utf-8", timeout=0.1)
+    if proc.exitstatus:
+        return False
+    alsa_audio_srcs[device] = proc
+    for i in range(10):
+        ports = jclient.get_ports(f"zynain_{device}")
+        if ports:
+            for i, port in enumerate(ports):
+                port.set_alias(f"{device} {i + 1}")
+            return True
+        sleep(0.1)
+    logging.warning(f"Failed to set {device} aliases")
+    return True
+
+
+def stop_alsa_in(device):
+    global alsa_audio_srcs
+    if device not in alsa_audio_srcs:
+        return False
+    alsa_audio_srcs[device].terminate()
+    alsa_audio_srcs.pop(device)
+    return True
+
+
+def start_alsa_out(device):
+    global alsa_audio_dests
+    if device in alsa_audio_dests:
+        return False
+    proc = pexpect.spawn(f"alsa_out -d hw:{device} -j zynaout_{device}", encoding="utf-8", timeout=0.1)
+    if proc.exitstatus:
+        return False
+    alsa_audio_dests[device] = proc
+    for i in range(10):
+        ports = jclient.get_ports(f"zynaout_{device}")
+        if ports:
+            for i, port in enumerate(ports):
+                port.set_alias(f"{device} {i + 1}")
+            return True
+        sleep(0.1)
+    logging.warning(f"Failed to set {device} aliases")
+    return True
+
+
+def stop_alsa_out(device):
+    global alsa_audio_dests
+    if device not in alsa_audio_dests:
+        return False
+    alsa_audio_dests[device].terminate()
+    alsa_audio_dests.pop(device)
+    return True
+
+
+def stop_all_alsa_in_out():
+    for device in get_alsa_hotplug_audio_devices(False):
+        stop_alsa_in(device)
+    for device in get_alsa_hotplug_audio_devices(True):
+        stop_alsa_out(device)
 
 
 # Connect mixer to the ffmpeg recorder
@@ -982,10 +1179,9 @@ def audio_connect_ffmpeg(timeout=2.0):
     while t < timeout:
         try:
             # TODO: Do we want post fader, post effects feed?
-            jclient.connect(
-                f"zynmixer_bus:input_00a", "ffmpeg:input_1")
-            jclient.connect(
-                f"zynmixer_bus:input_00b", "ffmpeg:input_2")
+            #  => It's just for recording video tutorials, but if the recorded video is about post-fader effects ...
+            jclient.connect("zynmixer:output_00a", "ffmpeg:input_1")
+            jclient.connect("zynmixer:output_00b", "ffmpeg:input_2")
             return
         except:
             sleep(0.1)
@@ -995,7 +1191,7 @@ def audio_connect_ffmpeg(timeout=2.0):
 def get_audio_capture_ports():
     """Get list of hardware audio inputs"""
 
-    return jclient.get_ports("system", is_output=True, is_audio=True, is_physical=True)
+    return jclient.get_ports("system", is_output=True, is_audio=True, is_physical=True) + jclient.get_ports("zynain", is_output=True, is_audio=True)
 
 
 def build_midi_port_name(port):
@@ -1154,6 +1350,9 @@ def auto_connect_thread():
                     # Check if requested to run midi connect (slow)
                     if deferred_midi_connect:
                         do_midi = True
+                    # Check if dynamic (hot-plug) audio changed
+                    if update_hw_audio_ports():
+                        do_audio = True
                     # Check if requested to run audio connect (slow)
                     if deferred_audio_connect:
                         do_audio = True
@@ -1222,6 +1421,7 @@ def init():
         devices_out_name.append(None)
 
     update_midi_in_dev_mode_all()
+    update_system_audio_aliases()
 
 
 def start(sm):
@@ -1250,9 +1450,7 @@ def start(sm):
     init()
 
     # Get System Playback Ports
-    hw_audio_dst_ports = jclient.get_ports(
-        "system:playback", is_input=True, is_audio=True, is_physical=True)
-
+    hw_audio_dst_ports = get_hw_audio_dst_ports()
     try:
         with open(f"{zynconf.config_dir}/sidechain.json", "r") as file:
             sidechain_map = json.load(file)
@@ -1272,7 +1470,7 @@ def start(sm):
 def stop():
     """Reset state and stop autoconnect thread"""
 
-    global exit_flag, jclient, thread, lock
+    global exit_flag, jclient, thread, lock, hw_audio_dst_ports
     exit_flag = True
     if thread:
         thread.join()
@@ -1283,6 +1481,8 @@ def stop():
         lock = None
 
     hw_audio_dst_ports = []
+
+    stop_all_alsa_in_out()
 
     if jclient:
         jclient.deactivate()

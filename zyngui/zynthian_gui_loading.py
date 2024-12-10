@@ -39,8 +39,8 @@ class zynthian_gui_loading:
     def __init__(self):
         self.shown = False
         self.zyngui = zynthian_gui_config.zyngui
-        self.width = zynthian_gui_config.display_width
-        self.height = zynthian_gui_config.display_height
+        self.width = zynthian_gui_config.screen_width
+        self.height = zynthian_gui_config.screen_height
         # Canvas for loading image animation
         self.canvas = tkinter.Canvas(
             zynthian_gui_config.top,
@@ -62,14 +62,15 @@ class zynthian_gui_loading:
             int(0.85 * self.height),
             anchor=tkinter.CENTER,
             justify=tkinter.CENTER,
-            font=(zynthian_gui_config.font_family, int(
-                0.8*zynthian_gui_config.font_size)),
+            font=(zynthian_gui_config.font_family, int(0.8*zynthian_gui_config.font_size)),
             fill=zynthian_gui_config.color_tx_off,
             text="")
         # Setup Loading Logo Animation
         self.loading_index = 0
         self.loading_item = self.canvas.create_image(
-            self.width//2, self.height//2, image=zynthian_gui_config.loading_imgs[0], anchor=tkinter.CENTER)
+            self.width//2, self.height//2,
+            image=zynthian_gui_config.loading_imgs[0],
+            anchor=tkinter.CENTER)
 
     def build_view(self):
         return True
@@ -82,7 +83,7 @@ class zynthian_gui_loading:
     def show(self):
         if not self.shown:
             self.shown = True
-            self.canvas.grid()
+            self.canvas.grid(row=0, column=zynthian_gui_config.main_screen_column)
 
     def set_error(self, txt):
         self.set_title(txt, zynthian_gui_config.color_error)
@@ -115,16 +116,15 @@ class zynthian_gui_loading:
                 self.loading_index += 1
                 if self.loading_index >= len(zynthian_gui_config.loading_imgs):
                     self.loading_index = 0
-                self.canvas.itemconfig(
-                    self.loading_item, image=zynthian_gui_config.loading_imgs[self.loading_index])
+                self.canvas.itemconfig(self.loading_item,
+                                       image=zynthian_gui_config.loading_imgs[self.loading_index])
             else:
                 self.reset_loading()
 
     def reset_loading(self, force=False):
         if self.loading_index > 0 or force:
             self.loading_index = 0
-            self.canvas.itemconfig(
-                self.loading_item, image=zynthian_gui_config.loading_imgs[0])
+            self.canvas.itemconfig(self.loading_item, image=zynthian_gui_config.loading_imgs[0])
 
     def zynpot_cb(self, i, dval):
         pass

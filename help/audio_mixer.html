@@ -27,22 +27,23 @@
   </div>
  </div>
 
- <h1>Audio Mixer</h1>
-
- <p>The audio mixer is the zynthian UI's "home" view. You can always access
-  the mixer by pushing the MIX button.</p>
- <p>It's composed of vertical strips associated with chains. Initially it will be empty, showing the main strip alone.
-  For each chain you create, a new strip is added to the mixer. There can be more mixer strips than can be displayed.
-  They will scroll left / right if you select a strip that is off screen.</p>
- <p>Each strip is an interactive widget that can be manipulated in several ways and it shows status info about the
-  associated chain.<p>
-
- <p>From top to bottom:</p>
+ <div class="right_container">
+  <h1>Audio Mixer</h1>
+  <p>The audio mixer is the zynthian UI's "home" view. You can always access
+   the mixer by pushing the MIX button.</p>
+  <p>It's composed of vertical strips associated with chains. Initially it will be empty, showing the main strip alone.
+   For each chain you create, a new strip is added to the mixer. There can be more mixer strips than can be displayed.
+   They will scroll left / right if you select a strip that is off screen.</p>
+  <p>Each strip is an interactive widget that can be manipulated in several ways and it shows status info about the
+   associated chain.<p>
+  <p>From top to bottom:</p>
+ </div>
 
  <div class="left_float_container">
   <img src="img/mixer_strip_legend_bg_black.png" class="full">
  </div>
 
+ <div class="right_container">
  <ul>
   <li><b>Solo:</b> Solo flag. Push to toggle. This is a non-exclusive solo mode. When a chain has solo enabled, all
    other chains without solo enabled will be muted, allowing auditioning of one or more chains. The <i>main</i> solo
@@ -58,6 +59,7 @@
   <li><b>Legend:</b> It shows an icon for the chain's type and a number for the assigned MIDI channel. Tap it to access
    the chain's control view.</li>
  </ul>
+ </div>
 
  <div class="clear"></div>
 

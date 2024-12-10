@@ -28,6 +28,7 @@ import signal
 import ctypes
 import logging
 from tkinter import EventType
+from time import sleep
 
 # Zynthian specific modules
 from zyngui import zynthian_gui_config

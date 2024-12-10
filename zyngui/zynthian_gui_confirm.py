@@ -44,11 +44,13 @@ class zynthian_gui_confirm():
         self.callback = None
         self.callback_params = None
         self.zyngui = zynthian_gui_config.zyngui
+        self.width = zynthian_gui_config.screen_width
+        self.height = zynthian_gui_config.screen_height
 
         # Main Frame
         self.main_frame = tkinter.Frame(zynthian_gui_config.top,
-                                        width=zynthian_gui_config.display_width,
-                                        height=zynthian_gui_config.display_height,
+                                        width=self.width,
+                                        height=self.height,
                                         bg=zynthian_gui_config.color_bg)
 
         self.text = tkinter.StringVar()
@@ -56,7 +58,7 @@ class zynthian_gui_confirm():
                                         font=(zynthian_gui_config.font_family,
                                               zynthian_gui_config.font_size, "normal"),
                                         textvariable=self.text,
-                                        wraplength=zynthian_gui_config.display_width-zynthian_gui_config.font_size*2,
+                                        wraplength=self.width-zynthian_gui_config.font_size*2,
                                         justify=tkinter.LEFT,
                                         padx=zynthian_gui_config.font_size,
                                         pady=zynthian_gui_config.font_size,
@@ -66,7 +68,8 @@ class zynthian_gui_confirm():
 
         self.yes_text_label = tkinter.Label(self.main_frame,
                                             font=(
-                                                zynthian_gui_config.font_family, zynthian_gui_config.font_size*2, "normal"),
+                                                zynthian_gui_config.font_family,
+                                                zynthian_gui_config.font_size*2, "normal"),
                                             text="Yes",
                                             width=3,
                                             justify=tkinter.RIGHT,
@@ -75,12 +78,12 @@ class zynthian_gui_confirm():
                                             bg=zynthian_gui_config.color_ctrl_bg_off,
                                             fg=zynthian_gui_config.color_tx)
         self.yes_text_label.bind("<ButtonRelease-1>", self.cb_yes_push)
-        self.yes_text_label.place(x=zynthian_gui_config.display_width,
-                                  y=zynthian_gui_config.display_height, anchor=tkinter.SE)
+        self.yes_text_label.place(x=self.width, y=self.height, anchor=tkinter.SE)
 
         self.no_text_label = tkinter.Label(self.main_frame,
                                            font=(
-                                               zynthian_gui_config.font_family, zynthian_gui_config.font_size*2, "normal"),
+                                               zynthian_gui_config.font_family,
+                                               zynthian_gui_config.font_size*2, "normal"),
                                            text="No",
                                            width=3,
                                            justify=tkinter.LEFT,
@@ -89,8 +92,7 @@ class zynthian_gui_confirm():
                                            bg=zynthian_gui_config.color_ctrl_bg_off,
                                            fg=zynthian_gui_config.color_tx)
         self.no_text_label.bind("<ButtonRelease-1>", self.cb_no_push)
-        self.no_text_label.place(
-            x=0, y=zynthian_gui_config.display_height, anchor=tkinter.SW)
+        self.no_text_label.place(x=0, y=self.height, anchor=tkinter.SW)
 
     def hide(self):
         if self.shown:
@@ -108,7 +110,7 @@ class zynthian_gui_confirm():
         self.callback_params = cb_params
         if not self.shown:
             self.shown = True
-            self.main_frame.grid()
+            self.main_frame.grid(row=0, column=zynthian_gui_config.main_screen_column)
 
     def zynpot_cb(self, i, dval):
         pass

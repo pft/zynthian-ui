@@ -30,7 +30,7 @@ import traceback
 
 # Zynthian specific modules
 from zyncoder.zyncore import lib_zyncore
-
+from zyngine import zynthian_controller
 
 class zynthian_processor:
 
@@ -550,6 +550,18 @@ class zynthian_processor:
         self.ctrl_screens_dict = {}
         for cscr in self.engine._ctrl_screens:
             self.ctrl_screens_dict[cscr[0]] = self.build_ctrl_screen(cscr[1])
+        if self.type == "Audio Effect" and self.eng_code not in ("MI", "MR"):
+            if "zyn_bypass" not in self.controllers_dict:
+                self.controllers_dict["zyn_bypass"] = zynthian_controller(self, 'zyn_bypass', {
+                    'name': "bypass",
+                    'is_toggle': True,
+                    'value_max': 1,
+                    'value_default': 0,
+                    'value': 0,
+                    'processor': self,
+                    'labels': ['inline', 'bypassed']
+                })
+            self.ctrl_screens_dict["ZynGlobal"] = [self.controllers_dict["zyn_bypass"]]
 
         # Set active the first screen
         if len(self.ctrl_screens_dict) > 0:
@@ -613,10 +625,23 @@ class zynthian_processor:
                     logging.error("Controller %s is not defined" % k)
         return zctrls
 
+    def send_controller_values(self):
+        """Send all controller values to engines
+
+           It should be called once when creating some processors that don't give controller feedback
+           or when loading presets that modify these controller values without giving feedback.
+           => fluidsynth, zynaddsubfx, linuxsampler, ...
+        """
+
+        for k, zctrl in self.controllers_dict.items():
+            zctrl.send_value()
+
     def send_ctrl_midi_cc(self):
         """Send MIDI CC for all controllers
 
         TODO: When is this required? Fluidsynth, linuxsampler and others calls this during set_preset
+        => It's used for setting MIDI controllers to a known value, avoiding "jumps" when moving knobs
+        => It should be replaced by send_controllers() (see above) and called one-time when creating the processor
         """
 
         for k, zctrl in self.controllers_dict.items():

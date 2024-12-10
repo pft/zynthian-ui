@@ -214,13 +214,10 @@ class zynthian_gui_engine(zynthian_gui_selector):
     def update_info(self):
         eng_info = self.get_info()
         quality_stars = "★" * eng_info["QUALITY"]
-        self.info_canvas.itemconfigure(
-            self.quality_stars_label, text=quality_stars)
+        self.info_canvas.itemconfigure(self.quality_stars_label, text=quality_stars)
         complexity_stars = "⚈" * eng_info["COMPLEX"]
-        self.info_canvas.itemconfigure(
-            self.complexity_stars_label, text=complexity_stars)
-        self.info_canvas.itemconfigure(
-            self.description_label, text=eng_info["DESCR"])
+        self.info_canvas.itemconfigure(self.complexity_stars_label, text=complexity_stars)
+        self.info_canvas.itemconfigure(self.description_label, text=eng_info["DESCR"])
         # self.description_label.delete("1.0", tkinter.END)
         # self.description_label.insert("1.0", eng_info["DESCR"])
 
@@ -243,23 +240,20 @@ class zynthian_gui_engine(zynthian_gui_selector):
         self.chain_manager.get_engine_info()
         self.engine_info = self.chain_manager.engine_info
         self.proc_type = self.zyngui.modify_chain_status["type"]
-        self.engines_by_cat = self.chain_manager.filtered_engines_by_cat(
-            self.proc_type, all=self.show_all)
+        self.engines_by_cat = self.chain_manager.filtered_engines_by_cat(self.proc_type, all=self.show_all)
         self.engine_cats = list(self.engines_by_cat.keys())
         logging.debug(f"CATEGORIES => {self.engine_cats}")
         # self.engines_by_cat = sorted(self.engines_by_cat.items(), key=lambda kv: "!" if kv[0] is None else kv[0])
 
     def recall_context_index(self):
         try:
-            self.index = self.context_index[self.proc_type +
-                                            "#" + str(self.cat_index)]
+            self.index = self.context_index[self.proc_type + "#" + str(self.cat_index)]
         except:
             self.index = 0
             self.update_context_index()
 
     def update_context_index(self):
-        self.context_index[self.proc_type + "#" +
-                           str(self.cat_index)] = self.index
+        self.context_index[self.proc_type + "#" + str(self.cat_index)] = self.index
 
     def build_view(self):
         self.show_all = False
@@ -296,8 +290,7 @@ class zynthian_gui_engine(zynthian_gui_selector):
 
             # Add category header when showing several cats...
             if len(cats) > 1:
-                self.list_data.append(
-                    (None, len(self.list_data), "> {}".format(cat)))
+                self.list_data.append((None, len(self.list_data), "> {}".format(cat)))
 
             # Split engines in standalone & plugins
             # standalone = []
@@ -315,14 +308,11 @@ class zynthian_gui_engine(zynthian_gui_selector):
                     info = infos[eng]
                     if self.show_all:
                         if info["ENABLED"]:
-                            self.list_data.append(
-                                (eng, i, "\u2612 " + info["TITLE"], info["NAME"]))
+                            self.list_data.append((eng, i, "\u2612 " + info["TITLE"], info["NAME"]))
                         else:
-                            self.list_data.append(
-                                (eng, i, "\u2610 " + info["TITLE"], info["NAME"]))
+                            self.list_data.append((eng, i, "\u2610 " + info["TITLE"], info["NAME"]))
                     else:
-                        self.list_data.append(
-                            (eng, i, info["TITLE"], info["NAME"]))
+                        self.list_data.append((eng, i, info["TITLE"], info["NAME"]))
 
             # if len(standalone) > 0:
             # self.list_data.append((None, None, "> Standalone"))
@@ -335,8 +325,7 @@ class zynthian_gui_engine(zynthian_gui_selector):
 
         # Display help if no engines are enabled ...
         if len(self.list_data) == 0:
-            self.list_data.append(
-                (None, len(self.list_data), "Bold-push to enable some engines"))
+            self.list_data.append((None, len(self.list_data), "Bold-push to enable some engines"))
             self.index = 0
             self.update_context_index()
 
@@ -406,14 +395,18 @@ class zynthian_gui_engine(zynthian_gui_selector):
         self.zselector.zctrl.engine = self
         if self.zsel2:
             self.zsel2.zctrl.set_options({'symbol': "cat_index", 'name': "Category", 'short_name': "Category",
-                                         'value_min': 0, 'value_max': len(self.engine_cats) - 1, 'value': self.cat_index})
+                                          'value_min': 0, 'value_max': len(self.engine_cats) - 1,
+                                          'value': self.cat_index})
             self.zsel2.config(self.zsel2.zctrl)
             self.zsel2.show()
         else:
-            zsel2_ctrl = zynthian_controller(self, "cat_index", {
-                                             'name': "Category", 'short_name': "Category", 'value_min': 0, 'value_max': len(self.engine_cats) - 1, 'value': self.cat_index})
+            zsel2_ctrl = zynthian_controller(self, "cat_index",
+                                             {'name': "Category", 'short_name': "Category", 'value_min': 0,
+                                              'value_max': len(self.engine_cats) - 1, 'value': self.cat_index})
             self.zsel2 = zynthian_gui_controller(zynthian_gui_config.select_ctrl - 1, self.main_frame,
-                                                 zsel2_ctrl, zs_hidden, selcounter=True, orientation=self.layout['ctrl_orientation'])
+                                                 zsel2_ctrl, zs_hidden,
+                                                 selcounter=True,
+                                                 orientation=self.layout['ctrl_orientation'])
         if not self.zselector_hidden:
             self.zsel2.grid(row=self.layout['ctrl_pos'][2][0],
                             column=self.layout['ctrl_pos'][2][1], sticky="news", pady=(0, 1))

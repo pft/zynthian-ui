@@ -27,32 +27,53 @@ import logging
 
 # Zynthian specific modules
 import zynautoconnect
-from zyngui.zynthian_gui_selector import zynthian_gui_selector
+from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
 
 # ------------------------------------------------------------------------------
 # Zynthian Audio-In Selection GUI Class
 # ------------------------------------------------------------------------------
 
 
-class zynthian_gui_audio_in(zynthian_gui_selector):
+class zynthian_gui_audio_in(zynthian_gui_selector_info):
 
     def __init__(self):
         self.chain = None
-        super().__init__('Audio In', True)
+        super().__init__('Audio In')
 
     def set_chain(self, chain):
         self.chain = chain
 
+    def build_view(self):
+        self.check_ports = 0
+        self.capture_ports = zynautoconnect.get_audio_capture_ports()
+        return super().build_view()
+
+    def refresh_status(self):
+        super().refresh_status()
+        self.check_ports += 1
+        if self.check_ports > 10:
+            self.check_ports = 0
+            ports = zynautoconnect.get_audio_capture_ports()
+            if self.capture_ports != ports:
+                self.capture_ports = ports
+                self.fill_list()
+
     def fill_list(self):
         self.list_data = []
 
-        for i, scp in enumerate(zynautoconnect.get_audio_capture_ports()):
+        for i, scp in enumerate(self.capture_ports):
+            if scp.aliases:
+                suffix = f" ({scp.aliases[0]})"
+            else:
+                suffix = ""
             if i + 1 in self.chain.audio_in:
                 self.list_data.append(
-                    (i + 1, scp.name, f"\u2612 Audio input {i + 1}"))
+                    (i + 1, scp.name, f"\u2612 Audio input {i + 1}{suffix}",
+                    [f"Audio input {i + 1} is connected to this chain.", "audio_input.png"]))
             else:
                 self.list_data.append(
-                    (i + 1, scp.name, f"\u2610 Audio input {i + 1}"))
+                    (i + 1, scp.name, f"\u2610 Audio input {i + 1}{suffix}", 
+                    [f"Audio input {i + 1} is disconnected from this chain.", "audio_input.png"]))
 
         super().fill_list()
 

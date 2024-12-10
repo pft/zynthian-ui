@@ -28,17 +28,17 @@ import os
 
 # Zynthian specific modules
 from zyngui import zynthian_gui_config
-from zyngui.zynthian_gui_selector import zynthian_gui_selector
+from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
 
 # ------------------------------------------------------------------------------
 # Zynthian Chain Options GUI Class
 # ------------------------------------------------------------------------------
 
 
-class zynthian_gui_chain_options(zynthian_gui_selector):
+class zynthian_gui_chain_options(zynthian_gui_selector_info):
 
     def __init__(self):
-        super().__init__('Option', True)
+        super().__init__('Option')
         self.index = 0
         self.chain = None
         self.chain_id = None
@@ -56,74 +56,78 @@ class zynthian_gui_chain_options(zynthian_gui_selector):
         audio_proc_count = self.chain.get_processor_count("Audio Effect")
 
         if self.chain.is_midi():
-            self.list_data.append(
-                (self.chain_note_range, None, "Note Range & Transpose"))
-            self.list_data.append((self.chain_midi_capture, None, "MIDI In"))
+            self.list_data.append((self.chain_note_range, None, "Note Range & Transpose",
+                                   ["Configure note range and transpose by octaves and semitones.", "note_range.png"]))
+            self.list_data.append((self.chain_midi_capture, None, "MIDI In",
+                                   ["Manage MIDI input sources. Enable/disable MIDI sources, toggle active/multi-timbral mode, load controller drivers, etc.", "midi_input.png"]))
 
         if self.chain.midi_thru:
-            self.list_data.append((self.chain_midi_routing, None, "MIDI Out"))
+            self.list_data.append((self.chain_midi_routing, None, "MIDI Out",
+                                   ["Manage MIDI output routing to external devices and other chains.", "midi_output.png"]))
 
         if self.chain.is_midi():
             try:
                 if synth_proc_count == 0 or self.chain.synth_slots[0][0].engine.options["midi_chan"]:
-                    self.list_data.append(
-                        (self.chain_midi_chan, None, "MIDI Channel"))
+                    self.list_data.append((self.chain_midi_chan, None, "MIDI Channel",
+                                           ["Select MIDI channel to receive from.", "midi_logo.png"]))
             except Exception as e:
                 logging.error(e)
 
         if synth_proc_count:
-            self.list_data.append((self.chain_midi_cc, None, "MIDI CC"))
+            self.list_data.append((self.chain_midi_cc, None, "MIDI CC",
+                                   ["Select MIDI CC numbers passed-thru to chain processors. It could interfere with MIDI-learning. Use with caution!", "midi_logo.png"]))
 
         if self.chain.get_processor_count() and not zynthian_gui_config.check_wiring_layout(["Z2", "V5"]):
             # TODO Disable midi learn for some chains???
             self.list_data.append((self.clean_midi_learn, None, "Clean MIDI Learn"))
+            self.list_data.append((self.midi_learn, None, "MIDI Learn",
+                                   ["Enter MIDI-learning mode for processor parameters.", ""]))
 
         if self.chain_id != 0 and self.chain.zynmixer and self.chain.zynmixer.eng_code!="MR":
-            self.list_data.append((self.chain_audio_capture, None, "Audio In"))
+            self.list_data.append((self.chain_audio_capture, None, "Audio In",
+                                  ["Manage audio capture sources.", "audio_input.png"]))
 
         if self.chain.is_audio():
-            self.list_data.append(
-                (self.chain_audio_routing, None, "Audio Out"))
+            self.list_data.append((self.chain_audio_routing, None, "Audio Out",
+                                   ["Manage audio output routing.", "audio_output.png"]))
 
         # TODO: Catch signal for Audio Recording status change
         if self.chain_id == 0 and not zynthian_gui_config.check_wiring_layout(["Z2", "V5"]):
             if self.zyngui.state_manager.audio_recorder.status:
                 self.list_data.append(
-                    (self.zyngui.state_manager.audio_recorder.toggle_recording, None, "■ Stop Audio Recording"))
+                    (self.zyngui.state_manager.audio_recorder.toggle_recording, None, "■ Stop Audio Recording", ["Stop audio recording", ""]))
             else:
                 self.list_data.append(
-                    (self.zyngui.state_manager.audio_recorder.toggle_recording, None, "⬤ Start Audio Recording"))
+                    (self.zyngui.state_manager.audio_recorder.toggle_recording, None, "⬤ Start Audio Recording", ["Start audio recording", ""]))
 
         self.list_data.append((None, None, "> Processors"))
 
         if self.chain.is_midi():
             # Add MIDI-FX options
-            self.list_data.append((self.midifx_add, None, "Add MIDI-FX"))
+            self.list_data.append((self.midifx_add, None, "Add MIDI-FX",
+                                   ["Add a new MIDI processor to process chain's MIDI input.", "midi_processor.png"]))
 
         self.list_data += self.generate_chaintree_menu()
 
         if self.chain.is_audio():
             # Add Audio-FX options
-            self.list_data.append(
-                (self.audiofx_add, None, "Add Audio-FX"))
+            self.list_data.append((self.audiofx_add, None, "Add Audio-FX",
+                                   ["Add a new audio processor to the end of the chain.", "audio_processor.png"]))
 
         if self.chain_id != 0:
             if synth_proc_count * midi_proc_count == 0 and audio_proc_count < 2:
-                self.list_data.append(
-                    (self.remove_chain, None, "Remove Chain"))
+                self.list_data.append((self.remove_chain, None, "Remove Chain", ["Remove this chain and all its processors.", "delete.png"]))
             else:
-                self.list_data.append((self.remove_cb, None, "Remove..."))
-            self.list_data.append((self.export_chain, None, "Export chain as snapshot..."))
+                self.list_data.append((self.remove_cb, None, "Remove...", ["Remove chain or processors.", "delete.png"]))
+            self.list_data.append((self.export_chain, None, "Export chain as snapshot...", ["Save the selected chain as a snapshot which may then be imported into another snapshot.", None]))
         elif audio_proc_count > 1:
-            self.list_data.append(
-                (self.remove_all_audiofx, None, "Remove all Audio-FX"))
+            self.list_data.append((self.remove_all_audiofx, None, "Remove all Audio-FX", ["Remove all audio-FX processors in this chain.", "delete.png"]))
 
         self.list_data.append((None, None, "> GUI"))
-        self.list_data.append((self.rename_chain, None, "Rename chain"))
+        self.list_data.append((self.rename_chain, None, "Rename chain", ["Rename the chain. Clear name to reset to default name.", None]))
         if self.chain_id:
             if len(self.zyngui.chain_manager.ordered_chain_ids) > 2:
-                self.list_data.append(
-                    (self.move_chain, None, "Move chain ⇦ ⇨"))
+                self.list_data.append((self.move_chain, None, "Move chain ⇦ ⇨", ["Reposition the chain in the mixer view.", None]))
 
         super().fill_list()
 
@@ -138,17 +142,21 @@ class zynthian_gui_chain_options(zynthian_gui_selector):
             for index, processor in enumerate(procs):
                 name = processor.get_name()
                 if index == num_procs - 1:
-                    res.append((self.processor_options, processor,
-                               "  " * indent + "╰─ " + name))
+                    text = "  " * indent + "╰─ " + name
                 else:
-                    res.append((self.processor_options, processor,
-                               "  " * indent + "├─ " + name))
+                    text = "  " * indent + "├─ " + name
+
+                res.append((self.processor_options, processor, text,
+                            [f"Options for MIDI processor '{name}'", "midi_processor.png"]))
+
             indent += 1
         # Add synth processor
         for slot in self.chain.synth_slots:
-            for proc in slot:
-                res.append((self.processor_options, proc, "  " *
-                           indent + "╰━ " + proc.get_name()))
+            for processor in slot:
+                name = processor.get_name()
+                text = "  " * indent + "╰━ " + name
+                res.append((self.processor_options, processor, text,
+                            [f"Options for synth processor '{name}'", "synth_processor.png"]))
                 indent += 1
         # Build pre-fader audio effects chain
         for slot in range(self.chain.get_slot_count("Audio Effect")):
@@ -157,11 +165,11 @@ class zynthian_gui_chain_options(zynthian_gui_selector):
             for index, processor in enumerate(procs):
                 name = processor.get_name()
                 if index == num_procs - 1:
-                    res.append((self.processor_options, processor,
-                               "  " * indent + "┗━ " + name))
+                    text = "  " * indent + "┗━ " + name
                 else:
-                    res.append((self.processor_options, processor,
-                               "  " * indent + "┣━ " + name))
+                    text = "  " * indent + "┣━ " + name
+                res.append((self.processor_options, processor, text,
+                            [f"Options for post-fader audio processor '{name}'", "audio_processor.png"]))
             indent += 1
         return res
 
@@ -242,12 +250,11 @@ class zynthian_gui_chain_options(zynthian_gui_selector):
         self.zyngui.show_screen("processor_options")
 
     def chain_midi_chan(self):
-        if self.chain.get_type() == "MIDI Tool":
-            chan_all = True
-        else:
-            chan_all = False
-        self.zyngui.screens['midi_chan'].set_mode(
-            "SET", self.chain.midi_chan, chan_all=chan_all)
+        #if self.chain.get_type() == "MIDI Tool":
+        #    chan_all = True
+        #else:
+        #    chan_all = False
+        self.zyngui.screens['midi_chan'].set_mode("SET", self.chain.midi_chan, chan_all=True)
         self.zyngui.show_screen('midi_chan')
 
     def chain_midi_cc(self):
@@ -257,6 +264,32 @@ class zynthian_gui_chain_options(zynthian_gui_selector):
     def chain_note_range(self):
         self.zyngui.screens['midi_key_range'].config(self.chain)
         self.zyngui.show_screen('midi_key_range')
+
+    def midi_learn(self):
+        options = {}
+        options['Enter MIDI-learn'] = "enable_midi_learn"
+        options['Enter Global MIDI-learn'] = "enable_global_midi_learn"
+        if self.processor:
+            options[f'Clear {self.processor.name} MIDI-learn'] = "clean_proc"
+        options['Clear chain MIDI-learn'] = "clean_chain"
+        self.zyngui.screens['option'].config(
+            "MIDI-learn", options, self.midi_learn_menu_cb)
+        self.zyngui.show_screen('option')
+
+    def midi_learn_menu_cb(self, options, params):
+        if params == 'enable_midi_learn':
+            self.zyngui.close_screen()
+            self.zyngui.cuia_toggle_midi_learn()
+        elif params == 'enable_global_midi_learn':
+            self.zyngui.close_screen()
+            self.zyngui.cuia_toggle_midi_learn()
+            self.zyngui.cuia_toggle_midi_learn()
+        elif params == 'clean_proc':
+            self.zyngui.show_confirm(
+                f"Do you want to clean MIDI-learn for ALL controls in processor {self.processor.name}?", self.zyngui.chain_manager.clean_midi_learn, self.processor)
+        elif params == 'clean_chain':
+            self.zyngui.show_confirm(
+                f"Do you want to clean MIDI-learn for ALL controls in ALL processors within chain {self.chain_id:02d}?", self.zyngui.chain_manager.clean_midi_learn, self.chain_id)
 
     def clean_midi_learn(self):
         self.zyngui.show_confirm(
@@ -298,7 +331,7 @@ class zynthian_gui_chain_options(zynthian_gui_selector):
         for dir in dirs:
             if dir.startswith(".") or not os.path.isdir(f"{self.zyngui.state_manager.snapshot_dir}/{dir}"):
                 continue
-            options[dir] = dir
+            options[dir] = [dir, ["Choose folder to store snapshot.", "folder.png"]]
         self.zyngui.screens['option'].config(
             "Select location for export", options, self.name_export)
         self.zyngui.show_screen('option')

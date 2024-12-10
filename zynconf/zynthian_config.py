@@ -205,11 +205,10 @@ def load_config(set_env=True, fpath=None):
         res = pattern.match(line)
         if res:
             varnames.append(res.group(1))
-            # logging.debug("CONFIG VARNAME: %s" % res.group(1))
+    #logging.debug(f"CONFIG VARNAMES: {varnames}")
 
     # Execute config script and dump environment
-    env = check_output("source \"{}\";env".format(
-        fpath), shell=True, universal_newlines=True, executable="/bin/bash")
+    env = check_output("source \"{}\";env".format(fpath), shell=True, universal_newlines=True, executable="/bin/bash")
 
     # Parse environment dump
     config = {}
@@ -281,11 +280,38 @@ def save_config(config, updsys=False, fpath=None):
         update_sys()
 
 
+def load_plain_envars(fpath, set_env=True):
+    # Get config file content
+    with open(fpath) as f:
+        lines = f.readlines()
+
+    # Parse plain envar assignment with or without export prefix
+    config = {}
+    pattern = re.compile("^([^#]*?)=(.*)")
+    for line in lines:
+        res = pattern.match(line)
+        if res:
+            parts = res.group(1).split(" ", maxsplit=1)
+            if len(parts) > 1:
+                if parts[0] == "export":
+                    varname = parts[1]
+                else:
+                    continue
+            else:
+                varname = res.group(1)
+            value = res.group(2).strip('\"').strip('\'')
+            config[varname] = value
+            # Set local environment
+            if set_env:
+                os.environ[varname] = value
+    #logging.debug(f"CONFIG: {config}")
+    return config
+
+
 def update_sys():
     try:
         os.environ['ZYNTHIAN_FLAG_MASTER'] = "NONE"
-        check_output(os.environ.get('ZYNTHIAN_SYS_DIR') +
-                     "/scripts/update_zynthian_sys.sh", shell=True)
+        check_output(os.environ.get('ZYNTHIAN_SYS_DIR') + "/scripts/update_zynthian_sys.sh", shell=True)
     except Exception as e:
         logging.error("Updating Sytem Config: %s" % e)
 
@@ -337,14 +363,12 @@ def get_wifi_list():
     # and create it if needed
     if "zynthian-ap" not in configured_wifi:
         logging.info("Creating Wi-Fi Access Point connection 'zynthian'...")
-        check_output(
-            f"{sys_dir}/sbin/create_wifi_access_point.sh", encoding='utf-8')
+        check_output(f"{sys_dir}/sbin/create_wifi_access_point.sh", encoding='utf-8')
 
     # Get list of available networks
     wifi_data = []
     ap_enabled = False
-    rows = check_output(["nmcli", "--terse", "dev", "wifi",
-                        "list"], encoding='utf-8').split("\n")
+    rows = check_output(["nmcli", "--terse", "dev", "wifi", "list"], encoding='utf-8').split("\n")
     for row in rows:
         parts = row.split(":")
         if len(parts) > 8:

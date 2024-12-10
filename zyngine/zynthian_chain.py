@@ -92,7 +92,7 @@ class zynthian_chain:
             self.title = "Main"
             self.audio_in = []
             # Default use first two physical audio outputs
-            self.audio_out = ["system:playback_[1,2]$"]
+            self.audio_out = ["^system:playback_1$|^system:playback_2$"]
             self.audio_thru = True
         else:
             self.title = ""
@@ -291,38 +291,37 @@ class zynthian_chain:
             return
 
         self.audio_routes = {}
-        # Add effects chain routes
-        for i, slot in enumerate(self.audio_slots):
+        # Add audio effects chain routes
+        first_slot_sources = []
+        if self.synth_slots:
+            for proc in self.synth_slots[-1]:
+                first_slot_sources.append(proc.get_jackname())
+        elif self.zynmixer and self.zynmixer.eng_code == "MR":
+            for am_slot in self.audio_slots:
+                if am_slot[0].eng_code in ("MI", "MR"):
+                    first_slot_sources = [f"zynmixer_chan:send_{am_slot[0].mixer_chan:02d}"]
+                    break
+        elif self.audio_thru:
+            first_slot_sources = self.get_input_pairs()
+        prev_slot_sources = first_slot_sources
+
+        for slot in self.audio_slots:
+            sources = []
             for processor in slot:
-                sources = []
                 if processor.bypass:
-                    continue
-                if i == 0:
-                    # First slot fed from synth or chain input
-                    if self.synth_slots:
-                        for proc in self.synth_slots[-1]:
-                            sources.append(proc.get_jackname())
-                    elif self.zynmixer and self.zynmixer.eng_code == "MR":
-                        for am_slot in self.audio_slots:
-                            if am_slot[0].eng_code in ("MI", "MR"):
-                                sources = [f"zynmixer_chan:send_{am_slot[0].mixer_chan:02d}"]
-                                break
-                    elif self.audio_thru:
-                        sources = self.get_input_pairs()
-                    jackname = processor.get_jackname()
+                    sources = []
+                    break
+                jackname = processor.get_jackname()
+                if jackname.startswith("zynmixer"):
+                    jackname += f":output_{processor.mixer_chan:02d}"
+                sources.append(jackname)
+            if sources:
+                for jackname in sources:
                     if jackname.startswith("zynmixer"):
-                        jackname += f":input_{processor.mixer_chan:02d}"
-                    self.audio_routes[jackname] = sources
-                else:
-                    for prev_proc in self.audio_slots[i - 1]:
-                        jackname = prev_proc.get_jackname()
-                        if jackname.startswith("zynmixer"):
-                            jackname += f":output_{prev_proc.mixer_chan:02d}"
-                        sources.append(jackname)
-                    jackname = processor.get_jackname()
-                    if jackname.startswith("zynmixer"):
-                        jackname += f":input_{processor.mixer_chan:02d}"
-                    self.audio_routes[jackname] = sources
+                        jackname = jackname.replace("output_", "input_")
+                    self.audio_routes[jackname] = prev_slot_sources
+                prev_slot_sources = sources
+
 
         # Add special processor inputs
         if self.is_synth():
@@ -334,16 +333,8 @@ class zynthian_chain:
         # Connect end of chain
         # Use end of post fader chain
 
-        if self.audio_slots:
-            slot = self.audio_slots[-1]
-            sources = []
-            for processor in slot:
-                jackname = processor.get_jackname()
-                if jackname.startswith("zynmixer"):
-                    jackname += f":output_{processor.mixer_chan:02d}" 
-                sources.append(jackname)
-            for output in self.get_audio_out():
-                self.audio_routes[output] = sources.copy()
+        for output in self.get_audio_out():
+            self.audio_routes[output] = prev_slot_sources.copy()
 
         zynautoconnect.release_lock()
 
@@ -356,13 +347,16 @@ class zynthian_chain:
         if self.chain_id == 0:
             return self.audio_in.copy()
         sources = []
+        input_ports = zynautoconnect.get_audio_capture_ports()
         for i in range(0, len(self.audio_in), 2):
             a = self.audio_in[i]
+            if a > len(input_ports):
+                continue
             if i < len(self.audio_in) - 1:
                 b = self.audio_in[i + 1]
-                sources.append(f"system:capture_({a}|{b})$")
+                sources.append(f"^{input_ports[a-1].name}$|^{input_ports[b-1].name}$")
             else:
-                sources.append(f"system:capture_({a})$")
+                sources.append(f"^{input_ports[a-1].name}$")
         return sources
 
     def rebuild_midi_graph(self):

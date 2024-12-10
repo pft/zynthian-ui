@@ -46,8 +46,8 @@ class zynthian_gui_base(tkinter.Frame):
     def __init__(self, has_backbutton=True):
         tkinter.Frame.__init__(self,
                                zynthian_gui_config.top,
-                               width=zynthian_gui_config.display_width,
-                               height=zynthian_gui_config.display_height)
+                               width=zynthian_gui_config.screen_width,
+                               height=zynthian_gui_config.screen_height)
         self.grid_propagate(False)
         self.rowconfigure(1, weight=1)
         self.columnconfigure(0, weight=1)
@@ -60,14 +60,13 @@ class zynthian_gui_base(tkinter.Frame):
         self.buttonbar_button = []
 
         # Geometry vars
-        self.buttonbar_height = zynthian_gui_config.display_height // 7
-        self.width = zynthian_gui_config.display_width
+        self.buttonbar_height = zynthian_gui_config.screen_height // 7
+        self.width = zynthian_gui_config.screen_width
         # TODO: Views should use current height if they need dynamic changes else grow rows to fill main_frame
         if zynthian_gui_config.enable_touch_navigation and self.buttonbar_config:
-            self.height = zynthian_gui_config.display_height - \
-                self.topbar_height - self.buttonbar_height
+            self.height = zynthian_gui_config.screen_height - self.topbar_height - self.buttonbar_height
         else:
-            self.height = zynthian_gui_config.display_height - self.topbar_height
+            self.height = zynthian_gui_config.screen_height - self.topbar_height
 
         # Status Area Parameters
         self.status_l = int(self.width * 0.25)
@@ -85,10 +84,10 @@ class zynthian_gui_base(tkinter.Frame):
             self.backbutton_height = 0
 
         # Title Area parameters
-        self.title_canvas_width = zynthian_gui_config.display_width - \
-            self.backbutton_width - self.status_l - self.status_lpad - 2
-        self.select_path_font = tkFont.Font(
-            family=zynthian_gui_config.font_topbar[0], size=zynthian_gui_config.font_topbar[1])
+        self.title_canvas_width = self.width - self.backbutton_width - self.status_l - self.status_lpad - 2
+        self.select_path_font = tkFont.Font(family=zynthian_gui_config.font_topbar[0],
+                                            size=zynthian_gui_config.font_topbar[1])
+
         self.select_path_width = 0
         self.select_path_offset = 0
         self.select_path_dir = 2
@@ -100,7 +99,7 @@ class zynthian_gui_base(tkinter.Frame):
 
         # Topbar's frame
         self.tb_frame = tkinter.Frame(self,
-                                      width=zynthian_gui_config.display_width,
+                                      width=self.width,
                                       height=self.topbar_height,
                                       bg=zynthian_gui_config.color_bg)
         self.tb_frame.grid_propagate(False)
@@ -119,8 +118,7 @@ class zynthian_gui_base(tkinter.Frame):
             self.backbutton_canvas.grid(row=0, column=col, sticky="wn", padx=(0, self.status_lpad))
             self.backbutton_canvas.grid_propagate(False)
         self.backbutton_canvas.bind('<Button-1>', self.cb_backbutton)
-        self.backbutton_canvas.bind(
-            '<ButtonRelease-1>', self.cb_backbutton_release)
+        self.backbutton_canvas.bind('<ButtonRelease-1>', self.cb_backbutton_release)
         self.backbutton_timer = None
         col += 1
         # Add back-arrow symbol
@@ -131,8 +129,7 @@ class zynthian_gui_base(tkinter.Frame):
                                               fg=zynthian_gui_config.color_tx)
         self.label_backbutton.place(relx=0.3, rely=0.5, anchor='w')
         self.label_backbutton.bind('<Button-1>', self.cb_backbutton)
-        self.label_backbutton.bind(
-            '<ButtonRelease-1>', self.cb_backbutton_release)
+        self.label_backbutton.bind('<ButtonRelease-1>', self.cb_backbutton_release)
 
         # Title
         self.title = ""
@@ -215,8 +212,7 @@ class zynthian_gui_base(tkinter.Frame):
 
     def show_back_button(self, show=True):
         if show:
-            self.backbutton_canvas.grid(
-                row=0, column=0, sticky="wn", padx=(0, self.status_lpad))
+            self.backbutton_canvas.grid(row=0, column=0, sticky="wn", padx=(0, self.status_lpad))
             self.backbutton_canvas.grid_propagate(False)
         else:
             self.backbutton_canvas.grid_remove()
@@ -277,19 +273,14 @@ class zynthian_gui_base(tkinter.Frame):
             return
 
         self.buttonbar_frame = tkinter.Frame(self,
-                                             width=zynthian_gui_config.display_width,
+                                             width=self.width,
                                              height=self.buttonbar_height,
                                              bg=zynthian_gui_config.color_bg)
         self.buttonbar_frame.grid(row=2, padx=(0, 0), pady=(0, 0))
         self.buttonbar_frame.grid_propagate(False)
-        self.buttonbar_frame.grid_rowconfigure(
-            0, minsize=self.buttonbar_height, pad=0)
+        self.buttonbar_frame.grid_rowconfigure(0, minsize=self.buttonbar_height, pad=0)
         for i in range(max(4, len(config))):
-            self.buttonbar_frame.grid_columnconfigure(
-                i,
-                weight=1,
-                uniform='buttonbar',
-                pad=0)
+            self.buttonbar_frame.grid_columnconfigure(i, weight=1, uniform='buttonbar', pad=0)
             try:
                 self.add_button(i, config[i][0], config[i][1])
             except Exception as e:
@@ -378,8 +369,7 @@ class zynthian_gui_base(tkinter.Frame):
 
     # Default topbar touch callback
     def cb_topbar_press(self, params=None):
-        self.topbar_timer = Timer(
-            zynthian_gui_config.zynswitch_long_seconds, self.cb_topbar_long)
+        self.topbar_timer = Timer(zynthian_gui_config.zynswitch_long_seconds, self.cb_topbar_long)
         self.topbar_timer.start()
         self.topbar_press_time = time.monotonic()
 
@@ -414,8 +404,7 @@ class zynthian_gui_base(tkinter.Frame):
 
     # Default status touch callback
     def cb_status_press(self, params=None):
-        self.status_timer = Timer(
-            zynthian_gui_config.zynswitch_long_seconds, self.cb_status_long)
+        self.status_timer = Timer(zynthian_gui_config.zynswitch_long_seconds, self.cb_status_long)
         self.status_timer.start()
         self.status_press_time = time.monotonic()
 
@@ -458,8 +447,7 @@ class zynthian_gui_base(tkinter.Frame):
 
     # Default menu button touch callback
     def cb_backbutton(self, params=None):
-        self.backbutton_timer = Timer(
-            zynthian_gui_config.zynswitch_long_seconds, self.cb_backbutton_long)
+        self.backbutton_timer = Timer(zynthian_gui_config.zynswitch_long_seconds, self.cb_backbutton_long)
         self.backbutton_timer.start()
         self.backbutton_press_time = time.monotonic()
 
@@ -504,11 +492,10 @@ class zynthian_gui_base(tkinter.Frame):
     def show(self):
         if not self.shown:
             if self.zyngui.test_mode:
-                logging.warning("TEST_MODE: {}".format(
-                    self.__class__.__module__))
+                logging.warning("TEST_MODE: {}".format(self.__class__.__module__))
             self.shown = True
             self.refresh_status()
-            self.grid(row=0, column=0, sticky='nsew')
+            self.grid(row=0, column=zynthian_gui_config.main_screen_column, sticky='nsew')
             self.propagate(False)
         self.main_frame.focus()
 
@@ -873,10 +860,10 @@ class zynthian_gui_base(tkinter.Frame):
     # Override if required
     def update_layout(self):
         if zynthian_gui_config.enable_touch_navigation and self.buttonbar_config:
-            self.height = zynthian_gui_config.display_height - \
+            self.height = zynthian_gui_config.screen_height - \
                 self.topbar_height - self.buttonbar_height
         else:
-            self.height = zynthian_gui_config.display_height - self.topbar_height
+            self.height = zynthian_gui_config.screen_height - self.topbar_height
 
     # Function to enable the top-bar parameter editor
     #  engine: Object to recieve send_controller_value callback

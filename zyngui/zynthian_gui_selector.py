@@ -95,8 +95,7 @@ class zynthian_gui_selector(zynthian_gui_base):
             for i in range(self.layout['rows']):
                 self.main_frame.rowconfigure(i, weight=1, uniform='ctrl_row')
         self.main_frame.columnconfigure(self.layout['list_pos'][1], weight=3)
-        self.main_frame.columnconfigure(
-            self.layout['list_pos'][1] + 1, weight=1)
+        self.main_frame.columnconfigure(self.layout['list_pos'][1] + 1, weight=1)
 
         # Row 4 expands to fill unused space
         # self.main_frame.rowconfigure(4, weight=1) #TODO: Validate row 4 is still required after chagnes to layout implementation (BW)
@@ -113,12 +112,15 @@ class zynthian_gui_selector(zynthian_gui_base):
             pady = (0, 1)
         else:
             pady = (0, 0)
-        self.listbox.grid(row=self.layout['list_pos'][0], column=self.layout['list_pos']
-                          [1], rowspan=self.layout['rows'], padx=padx, pady=pady, sticky="news")
+        self.listbox.grid(row=self.layout['list_pos'][0],
+                          column=self.layout['list_pos'][1],
+                          rowspan=self.layout['rows'],
+                          padx=padx,
+                          pady=pady,
+                          sticky="news")
 
         # Bind listbox events
         self.listbox_push_ts = 0
-        self.last_release = 0
         self.listbox.bind("<Button-1>", self.cb_listbox_push)
         self.listbox.bind("<ButtonRelease-1>", self.cb_listbox_release)
         self.listbox.bind("<B1-Motion>", self.cb_listbox_motion)
@@ -135,17 +137,16 @@ class zynthian_gui_selector(zynthian_gui_base):
                                                  highlightthickness=0,
                                                  bg=zynthian_gui_config.color_bg)
             # Position at top of column containing selector
-            self.loading_canvas.grid(
-                row=0, column=self.layout['list_pos'][1] + 1, rowspan=2, sticky="news")
+            self.loading_canvas.grid(row=0, column=self.layout['list_pos'][1] + 1, rowspan=2, sticky="news")
             self.loading_push_ts = None
             self.loading_canvas.bind("<Button-1>", self.cb_loading_push)
-            self.loading_canvas.bind(
-                "<ButtonRelease-1>", self.cb_loading_release)
+            self.loading_canvas.bind("<ButtonRelease-1>", self.cb_loading_release)
 
             # Setup Loading Logo Animation
             self.loading_index = 0
-            self.loading_item = self.loading_canvas.create_image(
-                3, 3, image=zynthian_gui_config.loading_imgs[0], anchor=tkinter.NW)
+            self.loading_item = self.loading_canvas.create_image(3, 3,
+                                                  image=zynthian_gui_config.loading_imgs[0],
+                                                  anchor=tkinter.NW)
         else:
             self.loading_canvas = None
             self.loading_index = 0
@@ -158,8 +159,7 @@ class zynthian_gui_selector(zynthian_gui_base):
 
     def update_layout(self):
         super().update_layout()
-        ctrl_width = self.width * \
-            self.layout['ctrl_width'] * self.sidebar_shown
+        ctrl_width = self.width * self.layout['ctrl_width'] * self.sidebar_shown
         if self.layout['columns'] == 2:
             lb_width = int(self.width - ctrl_width)
             lb_weight = 3
@@ -167,10 +167,8 @@ class zynthian_gui_selector(zynthian_gui_base):
             lb_width = int(self.width - 2 * ctrl_width)
             lb_weight = 2
         ctrl_width = int(ctrl_width)
-        self.main_frame.columnconfigure(
-            self.layout['list_pos'][1], minsize=lb_width, weight=lb_weight)
-        self.main_frame.columnconfigure(
-            self.layout['list_pos'][1] + 1, minsize=ctrl_width, weight=self.sidebar_shown)
+        self.main_frame.columnconfigure(self.layout['list_pos'][1], minsize=lb_width, weight=lb_weight)
+        self.main_frame.columnconfigure(self.layout['list_pos'][1] + 1, minsize=ctrl_width, weight=self.sidebar_shown)
 
     def build_view(self):
         self.fill_list()
@@ -199,8 +197,8 @@ class zynthian_gui_selector(zynthian_gui_base):
                     self.loading_index += 1
                     if self.loading_index > len(zynthian_gui_config.loading_imgs) + 1:
                         self.loading_index = 0
-                    self.loading_canvas.itemconfig(
-                        self.loading_item, image=zynthian_gui_config.loading_imgs[self.loading_index])
+                    self.loading_canvas.itemconfig(self.loading_item,
+                                                   image=zynthian_gui_config.loading_imgs[self.loading_index])
                 else:
                     self.reset_loading()
             except:
@@ -209,8 +207,7 @@ class zynthian_gui_selector(zynthian_gui_base):
     def reset_loading(self, force=False):
         if self.loading_canvas and (self.loading_index > 0 or force):
             self.loading_index = 0
-            self.loading_canvas.itemconfig(
-                self.loading_item, image=zynthian_gui_config.loading_imgs[0])
+            self.loading_canvas.itemconfig(self.loading_item, image=zynthian_gui_config.loading_imgs[0])
 
     def fill_listbox(self):
         self.listbox.delete(0, tkinter.END)
@@ -222,8 +219,9 @@ class zynthian_gui_selector(zynthian_gui_base):
                 label += item[5]
             self.listbox.insert(tkinter.END, label)
             if item[0] is None:
-                self.listbox.itemconfig(
-                    i, {'bg': zynthian_gui_config.color_panel_hl, 'fg': zynthian_gui_config.color_tx_off})
+                self.listbox.itemconfig(i,
+                                        {'bg': zynthian_gui_config.color_panel_hl,
+                                         'fg': zynthian_gui_config.color_tx_off})
             # Can't find any engine currently using this "format" feature:
             # last_param = item[len(item) - 1]
             # if isinstance(last_param, dict) and 'format' in last_param:
@@ -234,18 +232,25 @@ class zynthian_gui_selector(zynthian_gui_base):
         val = self.get_counter_from_index(self.index)
         vmax = self.get_counter_from_index(len(self.list_data) - 1)
         if self.zselector:
-            self.zselector.zctrl.set_options({'symbol': self.selector_caption, 'name': self.selector_caption,
-                                             'short_name': self.selector_caption, 'value_min': 0, 'value_max': vmax, 'value': val})
+            self.zselector.zctrl.set_options({'symbol': self.selector_caption,
+                                              'name': self.selector_caption,
+                                              'short_name': self.selector_caption,
+                                              'value_min': 0,
+                                              'value_max': vmax,
+                                              'value': val})
             self.zselector.config(self.zselector.zctrl)
             self.zselector.show()
         else:
             zselector_ctrl = zynthian_controller(None, self.selector_caption, {
-                                                 'value_min': 0, 'value_max': vmax, 'value': val})
+                                                'value_min': 0,
+                                                'value_max': vmax,
+                                                'value': val})
             self.zselector = zynthian_gui_controller(zynthian_gui_config.select_ctrl, self.main_frame,
-                                                     zselector_ctrl, zs_hidden, selcounter=True, orientation=self.layout['ctrl_orientation'])
+                                                     zselector_ctrl, zs_hidden,
+                                                     selcounter=True,
+                                                     orientation=self.layout['ctrl_orientation'])
         if not self.zselector_hidden:
-            self.zselector.grid(
-                row=self.layout['ctrl_pos'][3][0], column=self.layout['ctrl_pos'][3][1], sticky="news")
+            self.zselector.grid(row=self.layout['ctrl_pos'][3][0], column=self.layout['ctrl_pos'][3][1], sticky="news")
 
     def plot_zctrls(self):
         self.swipe_update()
@@ -256,8 +261,7 @@ class zynthian_gui_selector(zynthian_gui_base):
         self.zselector.plot_value()
 
     def swipe_nudge(self, dts):
-        self.swipe_speed = int(len(self.swipe_roll_scale) -
-                               ((dts - 0.02) / 0.06) * len(self.swipe_roll_scale))
+        self.swipe_speed = int(len(self.swipe_roll_scale) - ((dts - 0.02) / 0.06) * len(self.swipe_roll_scale))
         self.swipe_speed = min(
             self.swipe_speed, len(self.swipe_roll_scale) - 1)
         self.swipe_speed = max(self.swipe_speed, 0)
@@ -265,8 +269,7 @@ class zynthian_gui_selector(zynthian_gui_base):
     def swipe_update(self):
         if self.swipe_speed > 0:
             self.swipe_speed -= 1
-            self.listbox.yview_scroll(
-                self.swipe_dir * self.swipe_roll_scale[self.swipe_speed], tkinter.UNITS)
+            self.listbox.yview_scroll(self.swipe_dir * self.swipe_roll_scale[self.swipe_speed], tkinter.UNITS)
 
     def fill_list(self):
         self.fill_listbox()
@@ -451,8 +454,7 @@ class zynthian_gui_selector(zynthian_gui_base):
             self.swiping = True
             self.listbox.yview_scroll(offset_y, tkinter.UNITS)
             self.swipe_dir = abs(dy) // dy
-            self.listbox_y0 = event.y + self.swipe_dir * \
-                (abs(dy) % self.list_entry_height)
+            self.listbox_y0 = event.y + self.swipe_dir * (abs(dy) % self.list_entry_height)
             # Use time delta between last motion and release to determine speed of swipe
             self.listbox_push_ts = event.time
 

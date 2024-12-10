@@ -58,33 +58,31 @@ class zynthian_gui_keyboard():
         self.ctrl_order = zynthian_gui_config.layout['ctrl_order']
 
         # Geometry vars
-        self.width = zynthian_gui_config.display_width
-        self.height = zynthian_gui_config.display_height - \
-            zynthian_gui_config.topbar_height
+        self.width = zynthian_gui_config.screen_width
+        self.height = zynthian_gui_config.screen_height - zynthian_gui_config.topbar_height
+
 
         # Fonts
-        self.font_button = (zynthian_gui_config.font_family,
-                            int(1.2*zynthian_gui_config.font_size))
+        self.font_button = (zynthian_gui_config.font_family, int(1.2*zynthian_gui_config.font_size))
 
         # Create main frame
         self.main_frame = tkinter.Frame(zynthian_gui_config.top,
-                                        width=zynthian_gui_config.display_width,
-                                        height=zynthian_gui_config.display_height,
+                                        width=zynthian_gui_config.screen_width,
+                                        height=zynthian_gui_config.screen_height,
                                         bg=zynthian_gui_config.color_bg)
         self.main_frame.grid_propagate(False)
 
         # Display string being edited
-        self.text_canvas = tkinter.Canvas(
-            self.main_frame, width=self.width, height=zynthian_gui_config.topbar_height)
+        self.text_canvas = tkinter.Canvas(self.main_frame, width=self.width, height=zynthian_gui_config.topbar_height)
         self.text_label = self.text_canvas.create_text(self.width / 2, zynthian_gui_config.topbar_height / 2,
                                                        font=zynthian_gui_config.font_topbar,
-                                                       # font=tkFont.Font(family=zynthian_gui_config.font_topbar[0], size= int(zynthian_gui_config.topbar_height * 0.8))
+                                                       # font=tkFont.Font(family=zynthian_gui_config.font_topbar[0],
+                                                       # size= int(zynthian_gui_config.topbar_height * 0.8))
                                                        )
         self.text_canvas.grid(column=0, row=0, sticky="nsew")
 
         # Display keyboard grid
-        self.key_canvas = tkinter.Canvas(
-            self.main_frame, width=self.width, height=self.height, bg="grey")
+        self.key_canvas = tkinter.Canvas(self.main_frame, width=self.width, height=self.height, bg="grey")
         self.key_canvas.grid_propagate(False)
         self.key_canvas.grid(column=0, row=1, sticky="nesw")
         self.set_mode(OSK_QWERTY)
@@ -138,9 +136,9 @@ class zynthian_gui_keyboard():
         elif self.alt:
             if self.shift:
                 self.keys = ['\\', '|', '@', '/', '*', '=', '\"', '\'', '?', '¡',
-                                        'Ä', 'Ë', 'Ï', 'Ö', 'Ü', 'Â', 'Ê', 'Î', 'Ô', 'Û',
-                                        'Ñ', 'Ç', 'Ẅ', 'Ŵ', 'Ĉ', 'Ÿ', 'Ŷ', 'Ŝ', 'Ĝ', 'Ḧ',
-                                        'Ĥ', 'Ĵ', 'Ẑ', 'Ẍ', '{', '}', '~', '^', ':', '_']
+                             'Ä', 'Ë', 'Ï', 'Ö', 'Ü', 'Â', 'Ê', 'Î', 'Ô', 'Û',
+                             'Ñ', 'Ç', 'Ẅ', 'Ŵ', 'Ĉ', 'Ÿ', 'Ŷ', 'Ŝ', 'Ĝ', 'Ḧ',
+                             'Ĥ', 'Ĵ', 'Ẑ', 'Ẍ', '{', '}', '~', '^', ':', '_']
             else:
                 self.keys = ['á', 'é', 'í', 'ó', 'ú', 'à', 'è', 'ì', 'ò', 'ù',
                              'ä', 'ë', 'ï', 'ö', 'ü', 'â', 'ê', 'î', 'ô', 'û',
@@ -159,8 +157,9 @@ class zynthian_gui_keyboard():
                              'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '#']
         self.key_canvas.itemconfig("keycaps", text="")
         for index in range(len(self.keys)):
-            self.key_canvas.itemconfig(self.buttons[index][1], text=self.keys[index], tags=(
-                "key:%d" % (index), "keycaps"))
+            self.key_canvas.itemconfig(self.buttons[index][1],
+                                       text=self.keys[index],
+                                       tags=("key:%d" % (index), "keycaps"))
 
     # Function to add a button to the keyboard
     #  label: Button label
@@ -171,14 +170,18 @@ class zynthian_gui_keyboard():
     def add_button(self, label, col, row, colspan=1):
         index = len(self.buttons)
         tag = "key:%d" % (index)
-        r = self.key_canvas.create_rectangle(1 + self.key_width * col, 1 + self.key_height * row, self.key_width * (
-            col + colspan) - 1, self.key_height * (row + 1) - 1, tags=(tag), fill="black")
-        l = self.key_canvas.create_text(1 + self.key_width * (col + colspan / 2), 1 + self.key_height * (row + 0.5),
+        r = self.key_canvas.create_rectangle(1 + self.key_width * col,
+                                             1 + self.key_height * row,
+                                             self.key_width * (col + colspan) - 1,
+                                             self.key_height * (row + 1) - 1,
+                                             tags=(tag),
+                                             fill="black")
+        l = self.key_canvas.create_text(1 + self.key_width * (col + colspan / 2),
+                                        1 + self.key_height * (row + 0.5),
                                         text=label,
                                         fill="white",
                                         font=self.font_button,
-                                        tags=(tag)
-                                        )
+                                        tags=(tag))
         self.key_canvas.tag_bind(tag, "<Button-1>", self.on_key_press)
         self.key_canvas.tag_bind(tag, "<ButtonRelease-1>", self.on_key_release)
         self.buttons.append([r, l])
@@ -191,8 +194,7 @@ class zynthian_gui_keyboard():
     # Function to handle key press
     #  event: Mouse event
     def on_key_press(self, event=None):
-        tags = self.key_canvas.gettags(
-            self.key_canvas.find_withtag(tkinter.CURRENT))
+        tags = self.key_canvas.gettags(self.key_canvas.find_withtag(tkinter.CURRENT))
         if not tags:
             return
         dummy, index = tags[0].split(':')
@@ -239,11 +241,9 @@ class zynthian_gui_keyboard():
         elif key == self.btn_alt:
             self.alt = not self.alt
             if self.alt:
-                self.key_canvas.itemconfig(
-                    self.buttons[self.btn_alt][0], fill="red")
+                self.key_canvas.itemconfig(self.buttons[self.btn_alt][0], fill="red")
             else:
-                self.key_canvas.itemconfig(
-                    self.buttons[self.btn_alt][0], fill="black")
+                self.key_canvas.itemconfig(self.buttons[self.btn_alt][0], fill="black")
             self.refresh_keys()
 
         if key == self.btn_shift:
@@ -258,14 +258,11 @@ class zynthian_gui_keyboard():
 
         if shift != self.shift:
             if self.shift == 1:
-                self.key_canvas.itemconfig(
-                    self.buttons[self.btn_shift][0], fill="grey")
+                self.key_canvas.itemconfig(self.buttons[self.btn_shift][0], fill="grey")
             elif self.shift == 2:
-                self.key_canvas.itemconfig(
-                    self.buttons[self.btn_shift][0], fill="red")
+                self.key_canvas.itemconfig(self.buttons[self.btn_shift][0], fill="red")
             else:
-                self.key_canvas.itemconfig(
-                    self.buttons[self.btn_shift][0], fill="black")
+                self.key_canvas.itemconfig(self.buttons[self.btn_shift][0], fill="black")
             self.refresh_keys()
 
         self.text_canvas.itemconfig(self.text_label, text=self.text)
@@ -275,8 +272,7 @@ class zynthian_gui_keyboard():
     def highlight(self, key):
         box = self.key_canvas.bbox(self.buttons[key][0])
         if box:
-            self.key_canvas.coords(
-                self.highlight_box, box[0]+1, box[1]+1, box[2], box[3])
+            self.key_canvas.coords(self.highlight_box, box[0]+1, box[1]+1, box[2], box[3])
 
     # Function to hide dialog
     def hide(self):
@@ -306,7 +302,7 @@ class zynthian_gui_keyboard():
             self.highlight(self.selected_button)
             self.setup_zynpots()
             self.refresh_keys()
-            self.main_frame.grid()
+            self.main_frame.grid(row=0, column=zynthian_gui_config.main_screen_column)
             self.shown = True
 
     # Function to register encoders

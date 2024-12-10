@@ -3,9 +3,9 @@
 # ******************************************************************************
 # ZYNTHIAN PROJECT: Zynthian GUI
 #
-# Zynthian Widget Class for "Zynthian Audio Player" (zynaudioplayer#one)
+# Zynthian Widget Class for "Sooperlooper"
 #
-# Copyright (C) 2022 Brian Walton <riban@zynthian.org>
+# Copyright (C) 2022-2024 Brian Walton <riban@zynthian.org>
 #
 # ******************************************************************************
 #
@@ -63,7 +63,7 @@ class zynthian_widget_sooperlooper(zynthian_widget_base.zynthian_widget_base):
 
         self.tri_size = int(0.5 * zynthian_gui_config.font_size)
         # int(0.70 * self.font_size_sl)
-        txt_y = zynthian_gui_config.display_height // 22
+        txt_y = zynthian_gui_config.screen_height // 22
         self.txt_x = 4
 
         self.pos_canvas = []
@@ -342,6 +342,8 @@ class zynthian_widget_sooperlooper(zynthian_widget_base.zynthian_widget_base):
         if btn in ['undo', 'redo']:
             liblo.send(self.osc_url, '/sl/-3/hit', ('s', btn))
         else:
+            if btn in self.processor.engine.SL_LOOP_SEL_PARAM:
+                btn += f":{self.processor.engine.selected_loop}"
             self.processor.controllers_dict[btn].toggle()
 
     def on_slider_wheel(self, event):

@@ -799,7 +799,7 @@ class zynthian_chain_manager:
             # TODO: Derive next available processor id from self.processors
             proc_id = self.get_available_processor_id()
         elif proc_id in self.processors:
-            logging.error(f"Processor '{proc_id}' already exist!")
+            logging.error(f"Processor '{proc_id}' already exists!")
             return None
 
         if self.state_manager.is_busy():

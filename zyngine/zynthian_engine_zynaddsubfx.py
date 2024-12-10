@@ -26,6 +26,7 @@ import os
 import shutil
 import logging
 from time import sleep
+from string import Template
 from os.path import isfile, join
 from subprocess import check_output
 
@@ -49,10 +50,10 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
 
     # MIDI Controllers
     _ctrls = [
-        ['volume', 7, 115],
+        #['volume', 7, 115],
         # ['panning', 10, 64],
         # ['expression', 11, 127],
-        # ['volume', '/part$i/Pvolume', 96],
+        ['volume', '/part$i/Pvolume', 96, 127, {'midi_cc': 7}],
         ['panning', '/part$i/Ppanning', 64],
         ['filter cutoff', 74, 64],
         ['filter resonance', 71, 64],
@@ -182,15 +183,12 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
 
     def add_processor(self, processor):
         self.processors.append(processor)
-        try:
-            processor.part_i = self.get_free_parts()[0]
-            processor.jackname = "{}:part{}/".format(
-                self.jackname, processor.part_i)
-            processor.refresh_controllers()
-            logging.debug("ADD processor => Part {} ({})".format(
-                processor.part_i, self.jackname))
-        except Exception as e:
-            logging.error(f"Unable to add processor to engine - {e}")
+        processor.part_i = self.get_free_parts()[0]
+        processor.jackname = "{}:part{}/".format(self.jackname, processor.part_i)
+        processor.refresh_controllers()
+        self.enable_part(processor)
+        processor.send_controller_values()
+        logging.debug("ADD processor => Part {} ({})".format(processor.part_i, self.jackname))
 
     def remove_processor(self, processor):
         self.disable_part(processor.part_i)
@@ -204,7 +202,9 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
     def set_midi_chan(self, processor):
         if self.osc_server and processor.part_i is not None:
             lib_zyncore.zmop_set_midi_chan_trans(
-                processor.chain.zmop_index, processor.get_midi_chan(), processor.part_i)
+                processor.chain.zmop_index,
+                processor.get_midi_chan(),
+                processor.part_i)
 
     # ----------------------------------------------------------------------------
     # Preset Managament
@@ -219,7 +219,7 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
         for f in sorted(os.listdir(preset_dir)):
             preset_fpath = join(preset_dir, f)
             ext = f[-3:].lower()
-            if (isfile(preset_fpath) and (ext == 'xiz' or ext == 'xmz' or ext == 'xsz' or ext == 'xlz')):
+            if isfile(preset_fpath) and (ext == 'xiz' or ext == 'xmz' or ext == 'xsz' or ext == 'xlz'):
                 try:
                     index = int(f[0:4])-1
                     title = str.replace(f[5:-4], '_', ' ')
@@ -229,8 +229,7 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
                 bank_lsb = int(index/128)
                 bank_msb = bank[1]
                 prg = index % 128
-                preset_list.append(
-                    [preset_fpath, [bank_msb, bank_lsb, prg], title, ext, f])
+                preset_list.append([preset_fpath, [bank_msb, bank_lsb, prg], title, ext, f])
         return preset_list
 
     def get_preset_list(self, bank):
@@ -241,12 +240,9 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
             return
         self.state_manager.start_busy("zynaddsubfx")
         if preset[3] == 'xiz':
-            self.enable_part(processor)
-            self.osc_server.send(
-                self.osc_target, "/load-part", processor.part_i, preset[0])
+            self.osc_server.send(self.osc_target, "/load-part", processor.part_i, preset[0])
             # logging.debug("OSC => /load-part %s, %s" % (processor.part_i,preset[0]))
         elif preset[3] == 'xmz':
-            self.enable_part(processor)
             self.osc_server.send(self.osc_target, "/load_xmz", preset[0])
             logging.debug("OSC => /load_xmz %s" % preset[0])
         elif preset[3] == 'xsz':
@@ -255,16 +251,7 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
         elif preset[3] == 'xlz':
             self.osc_server.send(self.osc_target, "/load_xlz", preset[0])
             logging.debug("OSC => /load_xlz %s" % preset[0])
-        self.osc_server.send(self.osc_target, "/volume")
-        i = 0
-        while self.state_manager.is_busy("zynaddsubfx"):
-            sleep(0.1)
-            if i > 100:
-                self.state_manager.end_busy("zynaddsubfx")
-                break
-            else:
-                i = i + 1
-        processor.send_ctrl_midi_cc()
+        self.wait_busy()
         return True
 
     def cmp_presets(self, preset1, preset2):
@@ -280,18 +267,38 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
     # Controller Managament
     # ----------------------------------------------------------------------------
 
+    def get_ctrl_options(self, ctrl, processor):
+        options = super().get_ctrl_options(ctrl, processor)
+
+        # OSC control =>
+        if isinstance(ctrl[1], str):
+            # replace variables ...
+            tpl = Template(ctrl[1])
+            try:
+                osc_path = tpl.safe_substitute(i=processor.part_i)
+                options['osc_path'] = osc_path
+                if self.osc_target_port > 0:
+                    options['osc_port'] = self.osc_target_port
+                logging.debug(f"CONTROLLER {ctrl[0]} with OSC PATH => {osc_path}")
+            except Exception as e:
+                logging.error(f"Malformed OSC path => {ctrl[1]}")
+
+        # Extra options => Pre-MIDI learning, etc.
+        if len(ctrl) > 4 and isinstance(ctrl[4], dict):
+            options.update(ctrl[4])
+
+        return options
+
     def send_controller_value(self, zctrl):
         try:
             if self.osc_server and zctrl.osc_path:
-                self.osc_server.send(
-                    self.osc_target, zctrl.osc_path, zctrl.get_ctrl_osc_val())
+                self.osc_server.send(self.osc_target, zctrl.osc_path, zctrl.get_ctrl_osc_val())
             else:
                 izmop = zctrl.processor.chain.zmop_index
                 if izmop is not None and izmop >= 0:
                     mchan = zctrl.processor.part_i
                     mval = zctrl.get_ctrl_midi_val()
-                    lib_zyncore.zmop_send_ccontrol_change(
-                        izmop, mchan, zctrl.midi_cc, mval)
+                    lib_zyncore.zmop_send_ccontrol_change(izmop, mchan, zctrl.midi_cc, mval)
         except Exception as err:
             logging.error(err)
 
@@ -301,12 +308,11 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
 
     def enable_part(self, processor):
         if self.osc_server and processor.part_i is not None:
-            self.osc_server.send(
-                self.osc_target, "/part%d/Penabled" % processor.part_i, True)
-            self.osc_server.send(self.osc_target, "/part%d/Prcvchn" %
-                                 processor.part_i, processor.part_i)
-            lib_zyncore.zmop_set_midi_chan_trans(
-                processor.chain.zmop_index, processor.get_midi_chan(), processor.part_i)
+            self.osc_server.send(self.osc_target, f"/part{processor.part_i}/Penabled", True)
+            self.osc_server.send(self.osc_target, f"/part{processor.part_i}/Prcvchn", processor.part_i)
+            lib_zyncore.zmop_set_midi_chan_trans(processor.chain.zmop_index,
+                                                 processor.get_midi_chan(),
+                                                 processor.part_i)
 
     def disable_part(self, i):
         if self.osc_server:
@@ -334,6 +340,17 @@ class zynthian_engine_zynaddsubfx(zynthian_engine):
                 self.state_manager.end_busy("zynaddsubfx")
         except Exception as e:
             logging.warning(e)
+
+    def wait_busy(self):
+        self.osc_server.send(self.osc_target, "/volume")
+        i = 0
+        while self.state_manager.is_busy("zynaddsubfx"):
+            sleep(0.1)
+            if i > 100:
+                self.state_manager.end_busy("zynaddsubfx")
+                break
+            else:
+                i = i + 1
 
     # ---------------------------------------------------------------------------
     # API methods

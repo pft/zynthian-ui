@@ -29,7 +29,7 @@ from time import monotonic
 
 # Zynthian specific modules
 from zyncoder.zyncore import lib_zyncore
-
+import zynautoconnect
 
 MIDI_CC_MODE_DETECT_TIMEOUT = 0.2
 MIDI_CC_MODE_DETECT_STEPS = 8
@@ -160,11 +160,7 @@ class zynthian_controller:
         if 'midi_chan' in options:
             self.midi_chan = options['midi_chan']
         if 'midi_cc' in options:
-            cc = options['midi_cc']
-            if isinstance(cc, str):
-                self.osc_path = cc
-            else:
-                self.midi_cc = cc
+            self.midi_cc = options['midi_cc']
         if 'osc_port' in options:
             self.osc_port = options['osc_port']
         if 'osc_path' in options:
@@ -375,6 +371,14 @@ class zynthian_controller:
         if old_val == self.value:
             return
 
+        if self.symbol == "zyn_bypass":
+            self.processor.bypass = self.value
+            self.processor.chain.rebuild_audio_graph()
+            zynautoconnect.request_audio_connect(True)
+        self.send_value(send)
+        self.is_dirty = True
+
+    def send_value(self, send=True):
         mval = None
         if self.engine and send:
             # Send value using engine method...
@@ -385,22 +389,18 @@ class zynthian_controller:
                 try:
                     if self.osc_path:
                         # logging.debug("Sending OSC Controller '{}', {} => {}".format(self.symbol, self.osc_path, self.get_ctrl_osc_val()))
-                        liblo.send(self.engine.osc_target,
-                                   self.osc_path, self.get_ctrl_osc_val())
+                        liblo.send(self.engine.osc_target, self.osc_path, self.get_ctrl_osc_val())
                     elif self.midi_cc:
                         mval = self.get_ctrl_midi_val()
                         # logging.debug("Sending MIDI Controller '{}', CH{}#CC{}={}".format(self.symbol, self.midi_chan, self.midi_cc, mval))
                         self.send_midi_cc(mval)
                 except Exception as e:
-                    logging.warning(
-                        "Can't send controller '{}' => {}".format(self.symbol, e))
+                    logging.warning("Can't send controller '{}' => {}".format(self.symbol, e))
 
         # Send feedback to MIDI controllers => What MIDI controllers? Those selected as MIDI-out?
         # TODO: Set midi_feeback to MIDI learn
         if self.midi_feedback:
             self.send_midi_feedback(mval)
-
-        self.is_dirty = True
 
     def send_midi_cc(self, mval=None):
         if mval is None:
@@ -613,6 +613,12 @@ class zynthian_controller:
 
         #logging.debug(f"CC val={val} => current mode={self.midi_cc_mode}, detecting mode {self.midi_cc_mode_detecting}"
         #              f" (count {self.midi_cc_mode_detecting_count}, zero {self.midi_cc_mode_detecting_zero})\n")
+
+        # Always use absolute mode with toggle controllers
+        if self.is_toggle:
+            self.midi_cc_mode = 0
+            self.midi_cc_mode_detecting = 0
+            return
 
         # Mode autodetection timeout
         now = monotonic()

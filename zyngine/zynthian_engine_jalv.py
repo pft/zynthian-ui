@@ -786,8 +786,7 @@ class zynthian_engine_jalv(zynthian_engine):
                 bpath, fname = os.path.split(f)
                 head, bname = os.path.split(bpath)
                 if bname:
-                    shutil.rmtree(zynthian_engine.my_data_dir +
-                                  "/presets/lv2/" + bname, ignore_errors=True)
+                    shutil.rmtree(zynthian_engine.my_data_dir +"/presets/lv2/" + bname, ignore_errors=True)
                     shutil.move(
                         bpath, zynthian_engine.my_data_dir + "/presets/lv2/")
                     count += 1
@@ -797,25 +796,19 @@ class zynthian_engine_jalv(zynthian_engine):
 
         # Else, try to convert from native format ...
         if os.path.isdir(dpath) or ext[1:].lower() == native_ext:
-            preset2lv2_cmd = "cd /tmp; /usr/local/bin/preset2lv2 {} \"{}\"".format(
+            preset2lv2_cmd = "cd /tmp; preset2lv2 {} \"{}\"".format(
                 cls.zynapi_get_preset2lv2_format(), dpath)
             try:
-                res = check_output(
-                    preset2lv2_cmd, stderr=STDOUT, shell=True).decode("utf-8")
+                res = check_output(preset2lv2_cmd, stderr=STDOUT, shell=True).decode("utf-8")
                 for bname in re.compile("Bundle '(.*)' generated").findall(res):
                     bpath = "/tmp/" + bname
                     logging.debug("Copying LV2-Bundle '{}' ...".format(bpath))
-                    shutil.rmtree(zynthian_engine.my_data_dir +
-                                  "/presets/lv2/" + bname, ignore_errors=True)
-                    shutil.move(
-                        bpath, zynthian_engine.my_data_dir + "/presets/lv2/")
-
+                    shutil.rmtree(zynthian_engine.my_data_dir + "/presets/lv2/" + bname, ignore_errors=True)
+                    shutil.move(bpath, zynthian_engine.my_data_dir + "/presets/lv2/")
                 cls.refresh_zynapi_instance()
-
             except Exception as e:
                 raise Exception(
                     "Conversion from {} to LV2 failed! => {}".format(native_ext, e))
-
         else:
             raise Exception("Unknown preset format: {}".format(native_ext))
 
@@ -825,7 +818,6 @@ class zynthian_engine_jalv(zynthian_engine):
         fmt = cls.zynapi_get_native_ext()
         if fmt:
             formats = fmt + "," + formats
-
         return formats
 
     @classmethod

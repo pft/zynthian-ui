@@ -62,8 +62,8 @@ from zyngine.zynthian_ctrldev_manager import zynthian_ctrldev_manager
 # Zynthian State Manager Class
 # ----------------------------------------------------------------------------
 
-capture_dir_sdc = os.environ.get(
-    'ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/capture"
+SNAPSHOT_SCHEMA_VERSION = 1
+capture_dir_sdc = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/capture"
 ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
 
 
@@ -96,11 +96,9 @@ class zynthian_state_manager:
         self.busy_details = None
         self.start_busy("zynthian_state_manager")
 
-        self.snapshot_dir = os.environ.get(
-            'ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/snapshots"
+        self.snapshot_dir = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/snapshots"
         self.default_snapshot_fpath = join(self.snapshot_dir, "default.zss")
-        self.last_state_snapshot_fpath = join(
-            self.snapshot_dir, "last_state.zss")
+        self.last_state_snapshot_fpath = join(self.snapshot_dir, "last_state.zss")
         # Increments each time a snapshot is loaded - modules may use to update if required
         self.last_snapshot_count = 0
         self.last_snapshot_fpath = ""
@@ -149,10 +147,11 @@ class zynthian_state_manager:
         self.chain_manager = zynthian_chain_manager(self)
         self.reset_zs3()
 
-        self.alsa_mixer_processor = zynthian_processor(
-            "MX", {"NAME": "Mixer", "TITLE": "ALSA Mixer", "TYPE": "MIXER", "CAT": None, "ENGINE": zynthian_engine_alsa_mixer, "ENABLED": True})
-        self.alsa_mixer_processor.engine = zynthian_engine_alsa_mixer(
-            self, self.alsa_mixer_processor)
+        self.alsa_mixer_processor = zynthian_processor("MX", {
+            "NAME": "Mixer", "TITLE": "ALSA Mixer", "TYPE": "MIXER",
+            "CAT": None, "ENGINE": zynthian_engine_alsa_mixer, "ENABLED": True
+        })
+        self.alsa_mixer_processor.engine = zynthian_engine_alsa_mixer(self, self.alsa_mixer_processor)
         self.alsa_mixer_processor.refresh_controllers()
 
         self.audio_recorder = zynthian_audio_recorder(self)
@@ -208,8 +207,7 @@ class zynthian_state_manager:
             logging.debug(f"Opened undervoltage sensor '{result[0]}'")
         except:
             try:
-                result = glob(
-                    "/sys/devices/platform/soc/soc:firmware/raspberrypi-hwmon/hwmon/**/in0_lcrit_alarm')")
+                result = glob("/sys/devices/platform/soc/soc:firmware/raspberrypi-hwmon/hwmon/**/in0_lcrit_alarm')")
                 self.hwmon_undervolt_file = open(result[0])
                 logging.debug(f"Opened undervoltage sensor '{result[0]}'")
             except:
@@ -219,8 +217,7 @@ class zynthian_state_manager:
         # RBPi native sensors monitoring interface
         if self.hwmon_thermal_file is None or self.hwmon_undervolt_file is None:
             try:
-                self.get_throttled_file = open(
-                    '/sys/devices/platform/soc/soc:firmware/get_throttled')
+                self.get_throttled_file = open('/sys/devices/platform/soc/soc:firmware/get_throttled')
             except:
                 self.get_throttled_file = None
 
@@ -245,8 +242,7 @@ class zynthian_state_manager:
         self.fast_thread.daemon = True  # thread dies with the program
         self.fast_thread.start()
 
-        zynsigman.register(zynsigman.S_AUDIO_PLAYER,
-                           self.SS_AUDIO_PLAYER_STATE, self.cb_status_audio_player)
+        zynsigman.register(zynsigman.S_AUDIO_PLAYER, self.SS_AUDIO_PLAYER_STATE, self.cb_status_audio_player)
 
         self.end_busy("start state")
 
@@ -255,8 +251,7 @@ class zynthian_state_manager:
 
         self.start_busy("stop state")
 
-        zynsigman.unregister(zynsigman.S_AUDIO_PLAYER,
-                             self.SS_AUDIO_PLAYER_STATE, self.cb_status_audio_player)
+        zynsigman.unregister(zynsigman.S_AUDIO_PLAYER, self.SS_AUDIO_PLAYER_STATE, self.cb_status_audio_player)
 
         self.exit_flag = True
         if self.fast_thread and self.fast_thread.is_alive():
@@ -575,8 +570,7 @@ class zynthian_state_manager:
                     if self.get_throttled_file:
                         try:
                             self.get_throttled_file.seek(0)
-                            thr = int('0x%s' %
-                                      self.get_throttled_file.read(), 16)
+                            thr = int('0x%s' % self.get_throttled_file.read(), 16)
                             if thr & 0x1:
                                 self.status_undervoltage = True
                             elif thr & (0x4 | 0x2):
@@ -615,16 +609,14 @@ class zynthian_state_manager:
                 status_midi_player = libsmf.getPlayState()
                 if self.status_midi_player != status_midi_player:
                     self.status_midi_player = status_midi_player
-                    zynsigman.send(
-                        zynsigman.S_STATE_MAN, self.SS_MIDI_PLAYER_STATE, state=status_midi_player)
+                    zynsigman.send(zynsigman.S_STATE_MAN, self.SS_MIDI_PLAYER_STATE, state=status_midi_player)
 
                 # MIDI Recorder
                 # TODO: Add callback from MIDI recorder to avoid polling (and regular access to c-lib)
                 status_midi_recorder = libsmf.isRecording()
                 if self.status_midi_recorder != status_midi_recorder:
                     self.status_midi_recorder = status_midi_recorder
-                    zynsigman.send(
-                        zynsigman.S_STATE_MAN, self.SS_MIDI_RECORDER_STATE, state=status_midi_recorder)
+                    zynsigman.send(zynsigman.S_STATE_MAN, self.SS_MIDI_RECORDER_STATE, state=status_midi_recorder)
 
                 # Sequencer Status => It must be improved using callbacks
                 self.zynseq.update_state()
@@ -878,11 +870,10 @@ class zynthian_state_manager:
                             # Sends to active chain's MIDI channel when device uses ACTI mode
                             if zynautoconnect.get_midi_in_dev_mode(izmip):
                                 chan = self.chain_manager.get_active_chain().midi_chan
-                            send_signal = self.chain_manager.set_midi_prog_preset(
-                                chan, pgm)
+                            send_signal = self.chain_manager.set_midi_prog_preset(chan, pgm)
                     if send_signal:
-                        zynsigman.send_queued(
-                            zynsigman.S_MIDI, zynsigman.SS_MIDI_PC, izmip=izmip, chan=chan, num=pgm)
+                        zynsigman.send_queued(zynsigman.S_MIDI, zynsigman.SS_MIDI_PC,
+                                              izmip=izmip, chan=chan, num=pgm)
 
                 # Note Off
                 elif evtype == 0x8:
@@ -1008,7 +999,6 @@ class zynthian_state_manager:
                             del state["zs3"][zs3][key]
                         except:
                             pass
-
 
             for key in ["last_snapshot_fpath", "midi_profile_state", "engine_config", "audio_recorder_armed", "zynseq_riff_b64", "alsa_mixer", "zyngui"]:
                 try:
@@ -1402,8 +1392,7 @@ class zynthian_state_manager:
                     if "transpose_semitone" in chain_state:
                         lib_zyncore.zmop_set_transpose_semitone(chain.zmop_index, chain_state["transpose_semitone"])
                     else:
-                        lib_zyncore.zmop_set_transpose_semitone(
-                            chain.zmop_index, 0)
+                        lib_zyncore.zmop_set_transpose_semitone(chain.zmop_index, 0)
                 if "midi_in" in chain_state:
                     chain.midi_in = chain_state["midi_in"]
                 if "midi_out" in chain_state:
@@ -1415,9 +1404,12 @@ class zynthian_state_manager:
                 chain.audio_out = []
                 if "audio_out" in chain_state:
                     for out in chain_state["audio_out"]:
-                        try:
+                        if isinstance(out, list):
                             chain.audio_out.append(f"{self.chain_manager.processors[out[0]].jackname}:{out[1]}")
-                        except:
+                        elif isinstance(out, str) and out.startswith("system:playback_["):
+                            # Nasty temporary fix for change of output routing
+                            chain.audio_out.append("^system:playback_1$|^system:playback_2$")
+                        elif out not in chain.audio_out:
                             chain.audio_out.append(out)
 
                 if "audio_thru" in chain_state:
@@ -1542,12 +1534,10 @@ class zynthian_state_manager:
                 note_high = lib_zyncore.zmop_get_note_high(chain.zmop_index)
                 if note_high < 127:
                     chain_state["note_high"] = note_high
-                transpose_octave = lib_zyncore.zmop_get_transpose_octave(
-                    chain.zmop_index)
+                transpose_octave = lib_zyncore.zmop_get_transpose_octave(chain.zmop_index)
                 if transpose_octave:
                     chain_state["transpose_octave"] = transpose_octave
-                transpose_semitone = lib_zyncore.zmop_get_transpose_semitone(
-                    chain.zmop_index)
+                transpose_semitone = lib_zyncore.zmop_get_transpose_semitone(chain.zmop_index)
                 if transpose_semitone:
                     chain_state["transpose_semitone"] = transpose_semitone
                 if chain.midi_in:
@@ -1577,8 +1567,7 @@ class zynthian_state_manager:
                         chain_state["midi_cc"] = {}
                     chain_state["midi_cc"][cc] = []
                     for zctrl in zctrls:
-                        chain_state["midi_cc"][cc].append(
-                            [zctrl.processor.id, zctrl.symbol])
+                        chain_state["midi_cc"][cc].append([zctrl.processor.id, zctrl.symbol])
             if chain_state:
                 chain_states[chain_id] = chain_state
         if chain_states:
@@ -1938,22 +1927,18 @@ class zynthian_state_manager:
         """Initialise MIDI configuration"""
         try:
             # Set active MIDI channel
-            lib_zyncore.set_active_midi_chan(
-                zynthian_gui_config.active_midi_channel)
+            lib_zyncore.set_active_midi_chan(zynthian_gui_config.active_midi_channel)
             # Set Global Tuning
             self.fine_tuning_freq = zynthian_gui_config.midi_fine_tuning
             lib_zyncore.set_tuning_freq(ctypes.c_double(self.fine_tuning_freq))
             # Set MIDI Master Channel
-            lib_zyncore.set_midi_master_chan(
-                zynthian_gui_config.master_midi_channel)
+            lib_zyncore.set_midi_master_chan(zynthian_gui_config.master_midi_channel)
             # Set MIDI System Messages flag
-            lib_zyncore.set_midi_system_events(
-                zynthian_gui_config.midi_sys_enabled)
+            lib_zyncore.set_midi_system_events(zynthian_gui_config.midi_sys_enabled)
             # Setup MIDI filter rules
             if self.midi_filter_script:
                 self.midi_filter_script.clean()
-            self.midi_filter_script = zynthian_midi_filter.MidiFilterScript(
-                zynthian_gui_config.midi_filter_rules)
+            self.midi_filter_script = zynthian_midi_filter.MidiFilterScript(zynthian_gui_config.midi_filter_rules)
         except Exception as e:
             logging.error(f"ERROR initializing MIDI : {e}")
 
@@ -2009,8 +1994,7 @@ class zynthian_state_manager:
         if val > 0:
             lib_zyncore.set_midi_system_events(1)
         else:
-            lib_zyncore.set_midi_system_events(
-                zynthian_gui_config.midi_sys_enabled)
+            lib_zyncore.set_midi_system_events(zynthian_gui_config.midi_sys_enabled)
 
         # Save config
         if save_config:
@@ -2065,8 +2049,7 @@ class zynthian_state_manager:
     def create_audio_player(self):
         if not self.audio_player:
             try:
-                self.audio_player = zynthian_processor(
-                    "AP", self.chain_manager.engine_info["AP"])
+                self.audio_player = zynthian_processor("AP", self.chain_manager.engine_info["AP"])
                 self.chain_manager.start_engine(self.audio_player, "AP")
             except Exception as e:
                 logging.error(
@@ -2124,8 +2107,7 @@ class zynthian_state_manager:
         if not libsmf.isRecording():
             libsmf.unload(self.smf_recorder)
             libsmf.startRecording()
-            zynsigman.send(zynsigman.S_STATE_MAN,
-                           self.SS_MIDI_RECORDER_STATE, state=True)
+            zynsigman.send(zynsigman.S_STATE_MAN, self.SS_MIDI_RECORDER_STATE, state=True)
             return True
         else:
             return False
@@ -2142,8 +2124,7 @@ class zynthian_state_manager:
                 self.last_midi_file = fpath
                 result = True
 
-            zynsigman.send(zynsigman.S_STATE_MAN,
-                           self.SS_MIDI_RECORDER_STATE, state=False)
+            zynsigman.send(zynsigman.S_STATE_MAN, self.SS_MIDI_RECORDER_STATE, state=False)
 
         return result
 
@@ -2185,8 +2166,7 @@ class zynthian_state_manager:
             self.zynseq.transport_start("zynsmf")
             if libsmf.getPlayState() != zynsmf.PLAY_STATE_STOPPED:
                 self.status_midi_player = True
-                zynsigman.send(zynsigman.S_STATE_MAN,
-                               self.SS_MIDI_PLAYER_STATE, state=True)
+                zynsigman.send(zynsigman.S_STATE_MAN, self.SS_MIDI_PLAYER_STATE, state=True)
                 self.status_midi_player = False
             self.last_midi_file = fpath
             # self.zynseq.libseq.transportLocate(0)
@@ -2199,8 +2179,7 @@ class zynthian_state_manager:
         if libsmf.getPlayState() != zynsmf.PLAY_STATE_STOPPED:
             libsmf.stopPlayback()
             self.status_midi_player = False
-            zynsigman.send(zynsigman.S_STATE_MAN,
-                           self.SS_MIDI_PLAYER_STATE, state=False)
+            zynsigman.send(zynsigman.S_STATE_MAN, self.SS_MIDI_PLAYER_STATE, state=False)
         return self.status_midi_player
 
     def toggle_midi_playback(self, fname=None):
@@ -2694,7 +2673,7 @@ class zynthian_state_manager:
         self.checking_for_updates = True
 
         def update_thread():
-            update_available = False
+            logging.debug("************ CHECKING FOR UPDATES ... ************")
             try:
                 repos = ["zynthian-ui", "zynthian-sys", "zynthian-webconf", "zynthian-data", "zyncoder"]
                 # If attached to last stable => Detect if new tag relase available
@@ -2704,10 +2683,10 @@ class zynthian_state_manager:
                         path = f"/zynthian/{repo}"
                         branch = get_repo_branch(path)
                         # Get last tag release
-                        check_output(["git", "-C", path, "remote", "update", "origin", "--prune"], encoding="utf-8",
-                                          stderr=STDOUT)
-                        stags = check_output(["git", "-C", path, "tag", "-l", f"{stable_branch}-*"], encoding="utf-8",
-                                          stderr=STDOUT).strip().split("\n")
+                        check_output(["git", "-C", path, "remote", "update", "origin", "--prune"],
+                                     encoding="utf-8", stderr=STDOUT)
+                        stags = check_output(["git", "-C", path, "tag", "-l", f"{stable_branch}-*"],
+                                             encoding="utf-8", stderr=STDOUT).strip().split("\n")
                         last_stag = stags[-1].strip()
                         #logging.debug(f"STABLE TAG RELEASES => {stags}")
                         if branch != last_stag:
@@ -2719,10 +2698,11 @@ class zynthian_state_manager:
                     for repo in repos:
                         path = f"/zynthian/{repo}"
                         branch = get_repo_branch(path)
-                        local_hash = check_output(["git", "-C", path, "rev-parse", "HEAD"], encoding="utf-8",
-                                                  stderr=STDOUT).strip()
-                        remote_hash = check_output(["git", "-C", path, "ls-remote", "origin", branch], encoding="utf-8",
-                                                   stderr=STDOUT).strip().split('\t')[0]
+                        local_hash = check_output(["git", "-C", path, "rev-parse", "HEAD"],
+                                                  encoding="utf-8", stderr=STDOUT).strip()
+                        remote_hash = check_output(["git", "-C", path, "ls-remote", "origin", branch],
+                                                   encoding="utf-8", stderr=STDOUT).strip().split("\t")[0]
+                        #logging.debug(f"*********** BRANCH {branch} => local hash {local_hash}, remote hash {remote_hash} ****************")
                         if local_hash != remote_hash:
                             self.update_available = True
                             break
@@ -2731,12 +2711,13 @@ class zynthian_state_manager:
             self.checking_for_updates = False
 
         def get_repo_branch(path):
-            res = check_output(["git", "-C", path, "rev-parse", "--abbrev-ref", "HEAD"], encoding="utf-8",
-                               stderr=STDOUT).strip().split('/')
-            try:
-                return res[1]
-            except:
-                return res[0]
+            res = check_output(["git", "-C", path, "rev-parse", "--abbrev-ref", "HEAD"],
+                               encoding="utf-8", stderr=STDOUT).strip()
+            parts = res.split("/", 1)
+            if len(parts) > 1 and parts[0] == 'heads':
+                return parts[1]
+            else:
+                return res
 
         thread = Thread(target=update_thread, args=())
         thread.name = "Check update"

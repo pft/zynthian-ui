@@ -428,6 +428,8 @@ class zynthian_gui_touchscreen_calibration:
             self.setCalibration(self.device_id, self.ctm)
             self.main_frame.grid_forget()
             self.shown = False
+            if zynthian_gui_config.touch_keypad:
+                zynthian_gui_config.touch_keypad.show()
 
     # Build display
     def build_view(self):
@@ -448,6 +450,8 @@ class zynthian_gui_touchscreen_calibration:
 
     # Show display
     def show(self):
+        if zynthian_gui_config.touch_keypad:
+            zynthian_gui_config.touch_keypad.hide()
         self.main_frame.grid()
         self.onTimer()
         self.detect_thread = Thread(
