@@ -371,7 +371,7 @@ class zynthian_controller:
         if old_val == self.value:
             return
 
-        if self.symbol == "zyn_bypass":
+        if self.symbol == "zynbypass":
             self.processor.bypass = self.value
             self.processor.chain.rebuild_audio_graph()
             zynautoconnect.request_audio_connect(True)

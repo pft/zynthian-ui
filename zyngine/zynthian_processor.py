@@ -550,18 +550,21 @@ class zynthian_processor:
         self.ctrl_screens_dict = {}
         for cscr in self.engine._ctrl_screens:
             self.ctrl_screens_dict[cscr[0]] = self.build_ctrl_screen(cscr[1])
+
+        # Add audio processor bypass if does not already exist
         if self.type == "Audio Effect" and self.eng_code not in ("MI", "MR"):
-            if "zyn_bypass" not in self.controllers_dict:
-                self.controllers_dict["zyn_bypass"] = zynthian_controller(self, 'zyn_bypass', {
-                    'name': "bypass",
-                    'is_toggle': True,
-                    'value_max': 1,
-                    'value_default': 0,
-                    'value': 0,
-                    'processor': self,
-                    'labels': ['inline', 'bypassed']
-                })
-            self.ctrl_screens_dict["ZynGlobal"] = [self.controllers_dict["zyn_bypass"]]
+            if "bypass" not in self.controllers_dict and "BYPASS" not in self.controllers_dict:
+                if "zynbypass" not in self.controllers_dict:
+                    self.controllers_dict["zynbypass"] = zynthian_controller(self, 'zynbypass', {
+                        'name': "bypass",
+                        'is_toggle': True,
+                        'value_max': 1,
+                        'value_default': 0,
+                        'value': 0,
+                        'processor': self,
+                        'labels': ['inline', 'bypassed']
+                    })
+                self.ctrl_screens_dict["ZynGlobal"] = [self.controllers_dict["zynbypass"]]
 
         # Set active the first screen
         if len(self.ctrl_screens_dict) > 0:
