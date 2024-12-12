@@ -660,6 +660,10 @@ class zynthian_engine_jalv(zynthian_engine):
         # Add plugin native controllers
         for zctrl in self.lv2_zctrl_dict.values():
             zctrl.set_options({"processor": processor})
+        if self.name.startswith("Jalv/Gx") and "BYPASS" in self.lv2_zctrl_dict:
+            # Invert bypass
+            self.lv2_zctrl_dict["BYPASS"].ticks = [1, 0]
+            self.lv2_zctrl_dict["BYPASS"].range_reversed = True
         zctrls.update(self.lv2_zctrl_dict)
         return zctrls
 
