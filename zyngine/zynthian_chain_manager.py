@@ -73,7 +73,8 @@ engine2class = {
     'MC': zynthian_engine_midi_control,
     'PD': zynthian_engine_puredata,
     'MD': zynthian_engine_modui,
-    'IR': zynthian_engine_inet_radio
+    'IR': zynthian_engine_inet_radio,
+    'SP': zynthian_engine_librespot
 }
 
 # ----------------------------------------------------------------------------
@@ -93,7 +94,7 @@ class zynthian_chain_manager:
     SS_REMOVE_PROCESSOR = 7
 
     engine_info = None
-    single_processor_engines = ["BF", "MD", "PT", "AE", "SL", "IR"]
+    single_processor_engines = ["BF", "MD", "PT", "AE", "SL", "IR", "SP"]
 
     def __init__(self, state_manager):
         """ Create an instance of a chain manager
