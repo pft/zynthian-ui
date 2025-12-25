@@ -837,6 +837,12 @@ def audio_autoconnect():
                 jclient.disconnect(f"mod-monitor:out_{i}", port)
             except:
                 pass
+        # And for librespot rodiojack
+        for i in range(0, 2):
+            try:
+                jclient.disconnect(f"cpal_client_out:out_{i}", port)
+            except:
+                pass
 
     # Create graph of required chain routes as sets of sources indexed by destination
     required_routes = {}
