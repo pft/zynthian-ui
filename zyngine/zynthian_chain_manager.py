@@ -78,7 +78,8 @@ engine2class = {
     "MR": zynthian_engine_audio_mixer,
     "MX": zynthian_engine_alsa_mixer,
     "TP": zynthian_engine_tempo,
-    'CL': zynthian_engine_clippy
+    'CL': zynthian_engine_clippy,
+    'SP': zynthian_engine_spotify
 }
 
 # ----------------------------------------------------------------------------
@@ -99,7 +100,7 @@ class zynthian_chain_manager:
     SS_REMOVE_PROCESSOR = 8
 
     engine_info = None
-    single_processor_engines = ["BF", "MD", "PT", "AE", "SL", "IR"]
+    single_processor_engines = ["BF", "MD", "PT", "AE", "SL", "IR", "SP"]
 
     def __init__(self, state_manager):
         """ Create an instance of a chain manager
