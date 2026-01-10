@@ -130,8 +130,8 @@ class zynthian_engine_librespot(zynthian_engine):
         
         # self.command = "/root/librespot/target/debug/librespot --name {}".format(self.jackname)
         # self.command = "/root/librespot/target/release/librespot --bitrate 320 --name '{}/{}' -f F32".format(self.jackname, socket.getfqdn())
-        self.command = "/root/spotifyd --no-daemon -b rodiojack --audio-format f32 --bitrate 320 --use-mpris=true --no-audio-cache=true --onevent=/bin/true"
-        self.command = ["/root/spotifyd", "--no-daemon",
+        # self.command = "/usr/local/bin/spotifyd --no-daemon -b rodiojack --audio-format f32 --bitrate 320 --use-mpris=true --no-audio-cache=true --onevent=/bin/true"
+        self.command = ["/usr/local/bin/spotifyd", "--no-daemon",
                         "-b", "rodiojack",
                         "--audio-format", "f32",
                         "--bitrate", "320",
