@@ -475,6 +475,9 @@ class zynthian_engine_librespot(zynthian_engine):
             self.processors[0].controllers_dict['shuffle'].nudge(1 if changes.get('SHUFFLE') == 'true' else -1, False)
         if (event == 'repeat_changed'):
             self.processors[0].controllers_dict['repeat'].set_value(changes.get('REPEAT'), False)
+        if (event == 'volumeset'):
+            self.processors[0].controllers_dict['volume'].set_value(int(changes.get('VOLUME')) / 655.35, False)
+
 
     def play(self):
         
@@ -521,6 +524,16 @@ class zynthian_engine_librespot(zynthian_engine):
         except dbus.DBusException as e:
             logging.debug(f"An error occurred: {e}")
 
+    @debounce(0.1)
+    def send_volume(self, s) -> None:
+        try:
+            # Get the Spotify interface
+            spotify = self.session_bus.get_object('rs.spotifyd.instance{}'.format(self.proc.pid), '/org/mpris/MediaPlayer2')
+            spotify_interface = dbus.Interface(spotify, 'org.freedesktop.DBus.Properties')
+            spotify_interface.Set('org.mpris.MediaPlayer2.Player', 'Volume', dbus.Double(s/100))
+            print("Set volume")
+        except dbus.DBusException as e:
+            logging.debug(f"An error occurred: {e}")
 
     def next_song(self):
         
@@ -577,7 +590,7 @@ class zynthian_engine_librespot(zynthian_engine):
         if self.proc is None:
             return
         if zctrl.symbol == "volume":
-            self.proc_cmd(f"volume {zctrl.value * 3}")
+            self.send_volume(zctrl.value)
         elif zctrl.symbol == "prev/next":
             value = zctrl.value - 1
             zctrl.set_value(1, False)
