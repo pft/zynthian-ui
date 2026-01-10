@@ -242,8 +242,6 @@ class zynthian_engine_librespot(zynthian_engine):
             self.client.send(f"{cmd}\n".encode())
 
     def proc_poll_thread_task(self):
-        last_status = 0
-        last_info = 0
         line = ""
         while self.proc.poll() is None:
             now = monotonic()
