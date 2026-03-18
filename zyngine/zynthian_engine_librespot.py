@@ -312,76 +312,22 @@ class zynthian_engine_librespot(zynthian_engine):
     # ---------------------------------------------------------------------------
 
     def get_bank_list(self, processor=None):
-        try:
-            with open(self.my_data_dir + "/presets/inet_radio/presets.json", "r") as f:
-                self.presets = json.load(f)
-        except:
-            # Preset file missing or corrupt
-            self.presets = self.default_presets
-            """
-            # Write default preset file
-            json_obj = json.dumps(self.presets, indent=4)
-            with open(self.my_data_dir + "/presets/inet_radio/presets.json", "w") as f:
-                f.write(json_obj)
-            """
+        return []
 
-        self.banks = []
-        self.preset2bank = []
-        playlists = None
-        for bank_i, bank in enumerate(self.presets):
-            self.banks.append([bank, None, bank, None])
-            if bank == "Playlists":
-                self.presets[bank] = [] # Clear playlists
-                playlists = bank_i
-                continue
-            for preset_i, preset in enumerate(self.presets[bank]):
-                self.preset2bank.append((bank_i, preset_i, preset[2]))
-
-        # Append playlists
-        if playlists is None:
-            self.banks.append(["Playlists", None, "Playlists", None])
-            self.presets["Playlists"] = []
-            playlists = len(self.banks) - 1
-        # Populate playlists
-        for file in listdir(f"{self.my_data_dir}/capture"):
-            if file[-4:].lower() in (".m3u", ".pls"):
-                self.presets["Playlists"].append([f"{self.my_data_dir}/capture/{file}", 1, file[:-4]])
-
-        return self.banks
+    #def set_bank(self, processor, bank):
+    #    return True
 
     # ---------------------------------------------------------------------------
     # Preset Management
     # ---------------------------------------------------------------------------
 
-    def get_preset_list(self, bank, processor=None):
-        return []
-        presets = []
-        for preset in self.presets[bank[0]]:
-            presets.append(preset)
-        return copy.deepcopy(presets)
+    #def get_preset_list(self, bank, processor=None):
+    #    return []
 
-    def set_preset(self, processor, preset, preload=False):
-        if preload or self.preset == preset:
-            return
-        self.preset = preset
-        for self.preset_i, config in enumerate(self.preset2bank):
-            if config[0] == processor.bank_index and config[1] == processor.preset_index:
-                break
-        self.pending_preset_i = self.preset_i
-        self.proc_cmd("clear")
-        self.proc_cmd(f"add {preset[0]}")
-        self.monitors_dict['title'] = preset[2]
-        if preset[1]:
-            self._ctrl_screens = [
-                ['main', ['volume', 'stream', 'prev/next', 'pause']],
-                ['playlist', ['shuffle']]
-            ]
-        else:
-            self._ctrl_screens = [['main', ['volume', 'stream', 'prev/next']]]
-        processor.refresh_controllers()
-        self.reset_monitors()
-        self.delayed_connect_outputs()
-        return True
+    #def set_preset(self, processor, preset, preload=False):
+    #    return False
+
+    # ******************************************************************************
 
     def delayed_connect_outputs(self):
         """ Trigger background delayed audio autoconnect, incase other mechanisms fail"""
