@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # ******************************************************************************
-# ZYNTHIAN PROJECT: Zynthian Engine (zynthian_engine_inetradio)
+# ZYNTHIAN PROJECT: Zynthian Engine (zynthian_engine_spotify)
 #
-# zynthian_engine implementation for internet radio streamer
+# zynthian_engine implementation for spotify connect
 #
-# Copyright (C) 2022-2025 Brian Walton <riban@zynthian.org>
+# Copyright (C) 2026 Niels Giesen
 #
 # ******************************************************************************
 #
@@ -68,7 +68,7 @@ def debounce(wait_time):
     return decorator
 
 # ------------------------------------------------------------------------------
-# Internet Radio Engine Class
+# Spotify Connect Engine Class
 # ------------------------------------------------------------------------------
 
 #MAGIC_STRING = '[INFO] Running "/bin/true" using "/bin/bash" with environment variables '
@@ -76,13 +76,6 @@ MAGIC_STRING = '[\x1b[37mINFO\x1b[0m] Running "/bin/true" using "/bin/bash" with
 MAGIC_STRING_LEN = len(MAGIC_STRING)
 
 class zynthian_engine_spotify(zynthian_engine):
-
-    default_presets = {
-        "Ambient": [
-            ["http://relax.stream.publicradio.org/relax.mp3",
-             0, "Relax"]        
-        ]
-    }
 
     # ---------------------------------------------------------------------------
     # Config variables
@@ -123,7 +116,6 @@ class zynthian_engine_spotify(zynthian_engine):
             'connected': False,
             'length': 0
         }
-        self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_inet_radio.py"
         self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_spotify.py"
 
         self.command = ["/usr/local/bin/spotifyd", "--no-daemon",
@@ -268,22 +260,6 @@ class zynthian_engine_spotify(zynthian_engine):
     def on_change(self, changes):  
         if 'POSITION_MS' in changes:
             self.set_position(int(changes.get('POSITION_MS')))
-            # length = self.monitors_dict['length']
-            # print('Length: ', length)
-            # posms = int(changes.get('POSITION_MS'))
-            # print('posms', posms)
-            # pos = int(changes.get('POSITION_MS')) / self.monitors_dict['length']
-            # print('New pos:', pos)
-            # self.monitors_dict['position'] = posms
-            # try:
-            #     prcs = self.processors
-            #     d = prcs[0].controllers_dict
-            #     prcs[0].controllers_dict['position'].set_value(pos, False)
-            # except Exception as e:
-            #     print('nou moe', e)
-        # if 'TRACK_NAME' in changes:
-        #     self.monitors_dict["title"] = changes.get('TRACK_NAME')
-        #     self.getmetadata()
         if 'TRACK_COVER' in changes:
             self.monitors_dict["artwork"] = changes.get('TRACK_COVER')
         if 'PLAYER_EVENT' in changes:
@@ -366,7 +342,7 @@ class zynthian_engine_spotify(zynthian_engine):
                     try:
                         self.monitors_dict['length'] = normal_value // 1000
                     except Exception as e:  
-                        print('Gekke geit', e)
+                        print('Exception:', e)
                 
                 
                 print(f"{normal_key}: {normal_value}") 
