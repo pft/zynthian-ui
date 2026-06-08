@@ -298,7 +298,7 @@ class DeviceHandler(ModeHandlerBase):
         self._current_screen_obj = None
 
         cyclable_actions = {
-            BTN_OPT_ADMIN:      ("MENU", "SCREEN_ADMIN"),
+            BTN_OPT_ADMIN:      ("MENU", "MAIN_MENU"),
             BTN_MIX_LEVEL:      ("SCREEN_AUDIO_MIXER", "SCREEN_ALSA_MIXER"),
             BTN_CTRL_PRESET:    ("CHAIN_CONTROL", "PRESET", "BANK_PRESET"),
             BTN_ZS3_SHOT:       ("SCREEN_ZS3", "SCREEN_SNAPSHOT"),
