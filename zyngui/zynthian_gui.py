@@ -1815,6 +1815,16 @@ class zynthian_gui:
     def cuia_zs3_prev(self, params=None):
         self.state_manager.load_prev_zs3()
 
+    def cuia_zs3_cycle(self, params=None):
+        if params is not None and len(params) >= 1:
+            try:
+                offset = int(params[0])
+                self.state_manager.load_cycle_zs3(offset)
+            except:
+                self.state_manager.load_cycle_zs3()
+        else:
+            self.state_manager.load_cycle_zs3()
+
     # -------------------------------------------------------------------
     # MIDI Learn CUIAS:
     # -------------------------------------------------------------------

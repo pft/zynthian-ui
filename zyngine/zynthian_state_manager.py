@@ -1840,6 +1840,21 @@ class zynthian_state_manager:
             return False
         return self.load_zs3_by_index(index)
 
+    def load_cycle_zs3(self, offset=1):
+        try:
+            index = self.get_last_zs3_index() + offset
+        except:
+            index = offset
+        try:
+            zs3_id = list(self.zs3.keys())[index]
+        except:
+            try:
+                zs3_id = list(self.zs3.keys())[0]
+            except:
+                logging.warn(f"Can't find ZS3 with index {index} or 0")
+                return False
+        return self.load_zs3(zs3_id)
+
     # ------------------------------------------------------------------
     # Jackd Info
     # ------------------------------------------------------------------
