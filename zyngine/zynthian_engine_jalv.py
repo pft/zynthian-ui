@@ -49,6 +49,8 @@ from zyngine.ctrlinfo import *
 
 class zynthian_engine_jalv_base(zynthian_engine):
 
+    audio_out_names = None  # LV2 audio output port names indexed by symbol (lazy loaded)
+
     # ----------------------------------------------------------------------------
     # Initialization
     # ----------------------------------------------------------------------------
@@ -301,6 +303,32 @@ class zynthian_engine_jalv_base(zynthian_engine):
     def add_processor(self, processor):
         self.set_midi_chan(processor)
         super().add_processor(processor)
+
+    def get_output_groups(self):
+        """Get plugin's individual audio outputs, if it has more than a stereo pair: list of (label, jack regex)"""
+
+        ports = [p for p in zynautoconnect.get_ports(f"^{self.jackname}:") if p.is_output and p.is_audio]
+        if len(ports) <= 2:
+            return []
+        ports.sort(key=lambda p: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", p.shortname)])
+        names = self.get_audio_out_names()
+        return [(names.get(p.shortname, p.shortname), f"^{p.name}$") for p in ports]
+
+    def get_audio_out_names(self):
+        """Get dictionary of LV2 audio output port names indexed by port symbol (jack port name)"""
+
+        if self.audio_out_names is None:
+            self.audio_out_names = {}
+            try:
+                lilv = zynthian_lv2.lilv
+                plugin = zynthian_lv2.world.get_all_plugins()[self.plugin_url]
+                for i in range(plugin.get_num_ports()):
+                    port = plugin.get_port_by_index(i)
+                    if port.is_a(lilv.LILV_URI_OUTPUT_PORT) and port.is_a(lilv.LILV_URI_AUDIO_PORT):
+                        self.audio_out_names[str(port.get_symbol())] = str(port.get_name())
+            except Exception as e:
+                logging.warning(f"Can't get audio output names of {self.plugin_name}: {e}")
+        return self.audio_out_names
 
     def get_name(self, processor=None):
         return self.plugin_name

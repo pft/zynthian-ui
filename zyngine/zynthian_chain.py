@@ -71,6 +71,7 @@ class zynthian_chain:
         self.midi_out = []
         self.audio_in = []
         self.audio_out = []
+        self.audio_out_groups = {}  # Extra engine output ports: {source regex: [audio_out style destinations]}
 
         self.status = ""  # Arbitary status text => THIS IS NOT USED AT ALL, RIGHT?
 
@@ -103,6 +104,7 @@ class zynthian_chain:
             elif self.audio_thru:
                 self.audio_in = [1, 2] # Default is to route first 2 audio inputs to audio chains
             self.audio_out = [0]
+        self.audio_out_groups = {}
 
         if self.is_midi():
             lib_zyncore.zmop_reset_note_range_transpose(self.zmop_index)
@@ -359,6 +361,11 @@ class zynthian_chain:
         for output in self.get_audio_out():
             self.audio_routes[output] = prev_slot_sources.copy()
 
+        # Route engine's extra output ports (e.g. individual loops) directly, bypassing later slots
+        for source, outputs in self.audio_out_groups.items():
+            for output in outputs:
+                self.audio_routes.setdefault(output, []).append(source)
+
         zynautoconnect.release_lock()
         zynautoconnect.request_audio_connect()
 
@@ -449,6 +456,39 @@ class zynthian_chain:
             except:
                 pass
         logging.debug(f"Toggling Audio Output: {out}")
+
+        self.rebuild_audio_graph()
+        zynautoconnect.request_audio_connect(True)
+
+    def get_output_groups(self):
+        """Get extra output port groups offered by the chain's processors' engines
+
+        Returns : List of (processor name, [(label, jack regex of source ports)])
+        """
+
+        groups = []
+        for processor in self.get_processors():
+            get_groups = getattr(processor.engine, "get_output_groups", None)
+            if get_groups:
+                proc_groups = get_groups()
+                if proc_groups:
+                    groups.append((processor.get_name(), proc_groups))
+        return groups
+
+    def toggle_audio_out_group(self, group, out):
+        """Toggle destination of an engine output group
+
+        group : Jack regex of the group's source ports
+        out : Jack port regex or chain id of destination to toggle
+        """
+
+        outs = self.audio_out_groups.setdefault(group, [])
+        if out in outs:
+            outs.remove(out)
+        else:
+            outs.append(out)
+        if not outs:
+            del self.audio_out_groups[group]
 
         self.rebuild_audio_graph()
         zynautoconnect.request_audio_connect(True)

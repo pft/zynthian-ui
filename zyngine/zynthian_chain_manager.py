@@ -937,7 +937,8 @@ class zynthian_chain_manager:
         if dst_id in node_list:
             return True
         node_list.append(dst_id)
-        for chain_id in self.chains[dst_id].audio_out:
+        dst_chain = self.chains[dst_id]
+        for chain_id in dst_chain.audio_out + [out for outs in dst_chain.audio_out_groups.values() for out in outs]:
             if chain_id in self.chains:
                 if self.will_audio_howl(None, chain_id, node_list):
                     return True

@@ -29,6 +29,7 @@ from threading import Timer
 from time import sleep, monotonic
 from subprocess import Popen, DEVNULL
 
+import zynautoconnect
 from zynconf import ServerPort
 from zyngine.zynthian_engine import zynthian_engine
 from zyngine.zynthian_signal_manager import zynsigman
@@ -354,7 +355,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
         #	self.command = ["slgui", "-l 0", f"-P {self.osc_target_port}", f"-J {self.jackname}"]
         #else:
             #self.command = ["sooperlooper", "-q", "-l 0", "-D no", f"-p {self.osc_target_port}", f"-j {self.jackname}"]
-        self.command = ["sooperlooper", "-q", "-D no", f"-p {self.osc_target_port}", f"-j {self.jackname}"]
+        self.command = ["sooperlooper", "-q", "-D yes", f"-p {self.osc_target_port}", f"-j{self.jackname}"]
 
         if custom_slb_fpath:
             self.command += ["-m", custom_slb_fpath]
@@ -724,11 +725,25 @@ class zynthian_engine_sooperlooper(zynthian_engine):
             zctrl.set_value(1, False)
         elif symbol == 'loop_count':
             for loop in range(self.loop_count, zctrl.value):
-                self.osc_server.send(self.osc_target, '/loop_add', ('i', self.channels), ('f', 30), ('i', 0))
+                self.osc_server.send(self.osc_target, '/loop_add', ('i', self.channels), ('f', 30), ('i', 1)) # 1 = Discrete out
             if zctrl.value < self.loop_count:
                 # Don't remove loops - let GUI offer option to (confirm and) remove
                 zctrl.set_value(self.loop_count, False)
                 self.monitors_dict['loop_del'] = True
+
+    def add_processor(self, processor):
+        super().add_processor(processor)
+        # Chain routing uses the stereo mix ports, not the per-loop ports
+        processor.jackname = f"^{self.jackname}:common_(in|out)_[12]$"
+
+    def get_output_groups(self):
+        """Get per-loop output ports: list of (label, jack regex)"""
+
+        loops = set()
+        for port in zynautoconnect.get_ports(f"^{self.jackname}:loop[0-9]+_out_"):
+            if port.is_output:
+                loops.add(int(port.name.split(":loop")[1].split("_")[0]))
+        return [(f"Loop {loop}", f"^{self.jackname}:loop{loop}_out_[12]$") for loop in sorted(loops)]
 
     def single_pedal_cb(self):
         match self.pedal_taps:
@@ -785,6 +800,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
                 loop_count_changed = int(args[2]) - self.loop_count  # +/- quantity of added/removed loops
                 self.loop_count = int(args[2])
                 if loop_count_changed:
+                    zynautoconnect.request_audio_connect()  # Connect ports of new loops
                     labels = ['Host', 'None']
                     for loop in range(self.loop_count):
                         labels.append(f"Loop {loop + 1}")

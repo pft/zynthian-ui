@@ -1471,6 +1471,7 @@ class zynthian_state_manager:
                             chain.audio_out.append("^system:playback_1$|^system:playback_2$")
                         elif out not in chain.audio_out:
                             chain.audio_out.append(out)
+                chain.audio_out_groups = chain_state.get("audio_out_groups", {})
                 chain.rebuild_graph()
 
                 if restore_midi_learn:
@@ -1689,6 +1690,8 @@ class zynthian_state_manager:
                             out = [i, port_name]
                             break
                 chain_state["audio_out"].append(out)
+            if chain.audio_out_groups:
+                chain_state["audio_out_groups"] = {k: v.copy() for k, v in chain.audio_out_groups.items()}
             # Add chain MIDI mapping
             for key, zctrls in self.chain_manager.chain_midi_cc_binding.items():
                 if chain_id == (key >> 16) & 0xff:

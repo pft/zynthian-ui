@@ -38,11 +38,15 @@ from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
 
 class zynthian_gui_audio_out(zynthian_gui_selector_info):
 
+    group = None  # Jack regex of engine output group being edited, None for chain's main output
+    group_title = ""  # Description of group being edited
+
     def __init__(self, parent=None, topbar=None):
         super().__init__('Audio Out', parent=parent, topbar=topbar)
 
     def build_view(self):
         self.check_ports = 0
+        self.group = None
         self.playback_ports = zynautoconnect.get_hw_audio_dst_ports()
         return super().build_view()
 
@@ -58,6 +62,10 @@ class zynthian_gui_audio_out(zynthian_gui_selector_info):
 
     def fill_list(self):
         self.list_data = []
+        active_chain = self.zyngui.chain_manager.active_chain
+        outs = active_chain.audio_out if self.group is None else active_chain.audio_out_groups.get(self.group, [])
+        if self.group is not None:
+            self.list_data.append((None, None, f"> SEND {self.group_title} TO"))
         if self.zyngui.chain_manager.active_chain.chain_id:
             # Normal chain so add mixer / chain targets
             port_names = [("Main mixbus", 0, ["Send audio from this chain to the main mixbus", "audio_output.png"])]
@@ -79,7 +87,7 @@ class zynthian_gui_audio_out(zynthian_gui_selector_info):
                         logging.info(e)
                         pass
             for title, processor, info in port_names:
-                if processor in self.zyngui.chain_manager.active_chain.audio_out:
+                if processor in outs:
                     self.list_data.append((processor, processor, "\u2612 " + title, info))
                 else:
                     self.list_data.append((processor, processor, "\u2610 " + title, info))
@@ -106,21 +114,40 @@ class zynthian_gui_audio_out(zynthian_gui_selector_info):
                     port_names.append((f"Output {i + 2}{suffix}", f"^{self.playback_ports[i + 1].name}$", [f"Send audio from this chain directly to physical audio output {i + 2} as mono.", "audio_output.png"]))
                     port_names.append((f"Outputs {i + 1}+{i + 2} (stereo)", f"^{self.playback_ports[i].name}$|^{self.playback_ports[i + 1].name}$", [f"Send audio from this chain directly to physical audio outputs {i + 1} & {i + 2} as stereo.", "audio_output.png"]))
             for title, processor, info in port_names:
-                if processor in self.zyngui.chain_manager.active_chain.audio_out:
+                if processor in outs:
                     self.list_data.append((processor, processor, "\u2612 " + title, info))
                 else:
                     self.list_data.append((processor, processor, "\u2610 " + title, info))
             if len(self.list_data) == len_check:
                 self.list_data.pop() # Remove section title for empty section
 
+        if self.group is None:
+            # Engine's extra outputs (e.g. loops) have their own destinations
+            for name, groups in active_chain.get_output_groups():
+                self.list_data.append((None, None, f"> {name} OUTPUTS"))
+                for label, regex in groups:
+                    count = len(active_chain.audio_out_groups.get(regex, []))
+                    self.list_data.append((f"group:{regex}", None, f"{label} \u25b8 ({count})", [f"Choose where to send audio from {label} in addition to the chain's mix.", "audio_output.png"]))
+
         super().fill_list()
 
     def select_action(self, i, t='S'):
         if t == 'S':
-            self.zyngui.chain_manager.active_chain.toggle_audio_out(self.list_data[i][0])
+            value = self.list_data[i][0]
+            if isinstance(value, str) and value.startswith("group:"):
+                self.group = value[6:]
+                for name, groups in self.zyngui.chain_manager.active_chain.get_output_groups():
+                    for label, regex in groups:
+                        if regex == self.group:
+                            self.group_title = f"{name} {label}".upper()
+                self.set_select_path()
+            elif self.group is None:
+                self.zyngui.chain_manager.active_chain.toggle_audio_out(value)
+            else:
+                self.zyngui.chain_manager.active_chain.toggle_audio_out_group(self.group, value)
             self.fill_list()
         elif t == "B":
-            if not self.list_data[i][1].startswith("^system:"):
+            if not isinstance(self.list_data[i][1], str) or not self.list_data[i][1].startswith("^system:"):
                 return
             self.zyngui.state_manager.start_busy("alsa_output", "Getting audio level parameters...")
             sleep(0.1)
@@ -147,8 +174,16 @@ class zynthian_gui_audio_out(zynthian_gui_selector_info):
             if ctrl_list:
                 self.zyngui.show_screen("alsa_mixer", params=ctrl_list)
 
+    def back_action(self):
+        if self.group is not None:
+            self.group = None
+            self.set_select_path()
+            self.fill_list()
+            return True
+        return super().back_action()
+
     def set_select_path(self):
-        title = "Send Audio to ..."
+        title = "Send Audio to ..." if self.group is None else self.group_title.title()
         try:
             self.select_path.set(f"{self.zyngui.chain_manager.active_chain.get_name()}/{title}")
         except:
